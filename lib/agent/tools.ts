@@ -523,24 +523,59 @@ export const TOOLS: ToolDef[] = [
 
   {
     name: "upsert_person",
-    description: "Create or update a person in the CRM.",
+    description:
+      "Create or update a contact (CRM): name, role, organization, email, phone, and relationship/context. Merges into any existing details — call it whenever you learn something new about a person.",
     reversible: true,
     resourceType: "person",
     input_schema: {
       type: "object",
       properties: {
         name: { type: "string" },
-        metadata: { type: "object" },
+        email: { type: "string" },
+        role: { type: "string" },
+        organization: { type: "string" },
+        phone: { type: "string" },
+        context: { type: "string", description: "Relationship / how the user knows them / notes." },
       },
       required: ["name"],
     },
     handler: async (input, ctx) => {
       const sb = supabaseAdmin();
       const id = await findOrCreateEntity(ctx.userId, "person", input.name);
-      if (id && input.metadata) {
-        await sb.from("entities").update({ metadata: input.metadata }).eq("id", id);
+      if (id) {
+        const { data: cur } = await sb.from("entities").select("metadata").eq("id", id).maybeSingle();
+        const meta: Record<string, unknown> = { ...((cur?.metadata as any) ?? {}) };
+        for (const k of ["email", "role", "organization", "phone", "context"] as const) {
+          if (input[k]) meta[k] = input[k];
+        }
+        await sb.from("entities").update({ metadata: meta }).eq("id", id);
       }
       return { person_id: id, name: input.name };
+    },
+  },
+
+  {
+    name: "set_email_mode",
+    description:
+      "Set whether the agent may SEND email replies for an area, or only DRAFT them. Default for every area is draft-only.",
+    reversible: true,
+    resourceType: "area",
+    input_schema: {
+      type: "object",
+      properties: {
+        area: { type: "string" },
+        mode: { type: "string", enum: ["draft_only", "send"] },
+      },
+      required: ["area", "mode"],
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      const areaId = await resolveAreaId(ctx.userId, input.area);
+      if (!areaId) return { error: "Unknown area." };
+      const { data: cur } = await sb.from("entities").select("metadata").eq("id", areaId).maybeSingle();
+      const meta = { ...((cur?.metadata as any) ?? {}), email_mode: input.mode };
+      await sb.from("entities").update({ metadata: meta }).eq("id", areaId);
+      return { area: input.area, email_mode: input.mode };
     },
   },
 
