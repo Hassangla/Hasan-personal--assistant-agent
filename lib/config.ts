@@ -42,3 +42,20 @@ export function nowInUserTz(): string {
     hour12: false,
   }).format(new Date());
 }
+
+// "today" in the user's timezone, as YYYY-MM-DD.
+export function userToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: USER_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+// First instant of the current month, anchored to the user-tz calendar month
+// (expressed in UTC). Good enough for a dashboard month-to-date total.
+export function userMonthStartISO(): string {
+  const [y, m] = userToday().split("-");
+  return `${y}-${m}-01T00:00:00.000Z`;
+}
