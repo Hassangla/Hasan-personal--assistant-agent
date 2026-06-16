@@ -1,14 +1,21 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import { anthropic } from "@/lib/llm/anthropic";
-import { ANTHROPIC_MODEL, USER_TIMEZONE } from "@/lib/config";
+import { MODEL_FAST } from "@/lib/llm/models";
+import { USER_TIMEZONE } from "@/lib/config";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { buildSystemPrompt } from "@/lib/agent/systemPrompt";
-import { sendMessage, type InlineKeyboard } from "@/lib/telegram/client";
+import { sendMessage } from "@/lib/telegram/client";
+import { followupKeyboard } from "@/lib/telegram/keyboards";
 
-// The follow-up state machine (spec Part 1.2). Driven by the tick when a task's
-// next_nudge_at falls due. The claim_due_tasks() RPC has already locked the row
-// and pushed next_nudge_at out tentatively, so this can't double-send.
+// The follow-up state machine. Driven by the tick when a task's next_nudge_at
+// falls due (the claim_due_tasks RPC has locked the row and pushed it out, so
+// this can't double-send).
+//
+// Three modes:
+//   - delegated  → steady daily check-in ("has <person> finished?"), never stops.
+//   - deadline   → hourly reminders until done, never stops.
+//   - default    → gentle → firm → strong → stop after ~5 escalations.
 
 export type TaskRow = {
   id: string;
@@ -18,28 +25,15 @@ export type TaskRow = {
   status: string;
   nudge_count: number | null;
   escalation_level: number | null;
+  delegated_to: string | null;
 };
 
 const STOP_AFTER_ESCALATIONS = 5;
-
-function isoIn(ms: number): string {
-  return new Date(Date.now() + ms).toISOString();
-}
-
 const HOURS = 60 * 60 * 1000;
 const DAYS = 24 * HOURS;
 
-function followupButtons(taskId: string): InlineKeyboard {
-  return [
-    [
-      { text: "✅ Done", callback_data: `fu:${taskId}:done` },
-      { text: "😴 Snooze 1d", callback_data: `fu:${taskId}:snooze1d` },
-    ],
-    [
-      { text: "🕒 Snooze to…", callback_data: `fu:${taskId}:snoozeask` },
-      { text: "🗑 Drop", callback_data: `fu:${taskId}:drop` },
-    ],
-  ];
+function isoIn(ms: number): string {
+  return new Date(Date.now() + ms).toISOString();
 }
 
 function formatDue(due: string | null): string {
@@ -59,11 +53,13 @@ function formatDue(due: string | null): string {
   }
 }
 
-type Tone = "gentle" | "firm" | "strong";
+type Tone = "gentle" | "firm" | "strong" | "delegated";
 
 function fallbackNudge(task: TaskRow, tone: Tone): string {
   const due = task.due_at ? ` (due ${formatDue(task.due_at)})` : "";
   switch (tone) {
+    case "delegated":
+      return `Checking in: has ${task.delegated_to ?? "they"} finished "${task.title}"${due} yet?`;
     case "gentle":
       return `Reminder: "${task.title}"${due}. Did you get to it? If not, what's the plan?`;
     case "firm":
@@ -73,21 +69,26 @@ function fallbackNudge(task: TaskRow, tone: Tone): string {
   }
 }
 
-// Compose the nudge with the model, tone scaled by escalation. Uses a direct,
-// tool-free completion so composing a reminder can never trigger a side effect.
+// Compose the nudge with the FAST model (a short reminder is simple work).
 async function composeNudge(task: TaskRow, tone: Tone): Promise<string> {
   const due = task.due_at ? ` It is due ${formatDue(task.due_at)}.` : "";
-  const toneInstruction =
-    tone === "gentle"
-      ? "Gently remind them. One short line."
-      : tone === "firm"
-        ? "Firmly nudge them — this is slipping. One or two short lines."
-        : "This has been ignored repeatedly. Nudge strongly and ask whether you should drop it. Two short lines max.";
-  const prompt = `A tracked task is overdue for follow-up: "${task.title}".${due} Nudge count so far: ${task.nudge_count ?? 0}. ${toneInstruction} Ask plainly whether it's done; if not, ask the reason and whether to postpone (and to when). Match the user's language. Write ONLY the message body — no preamble.`;
+  let prompt: string;
+  if (tone === "delegated") {
+    prompt = `A task is delegated to ${task.delegated_to}: "${task.title}".${due} Ask the user whether ${task.delegated_to} has FULLY completed it yet — they'll answer with a button. One short line.`;
+  } else {
+    const toneInstruction =
+      tone === "gentle"
+        ? "Gently remind them. One short line."
+        : tone === "firm"
+          ? "Firmly nudge them — this is slipping. One or two short lines."
+          : "This has been ignored repeatedly. Nudge strongly. Two short lines max.";
+    prompt = `A tracked task is overdue for follow-up: "${task.title}".${due} Nudge count so far: ${task.nudge_count ?? 0}. ${toneInstruction} Ask plainly whether it's done; if not, ask the reason and whether to postpone (and to when).`;
+  }
+  prompt += " Match the user's language. Write ONLY the message body — no preamble.";
 
   try {
     const resp = await anthropic().messages.create({
-      model: ANTHROPIC_MODEL,
+      model: MODEL_FAST,
       max_tokens: 300,
       system: buildSystemPrompt({ proactive: true }),
       messages: [{ role: "user", content: prompt }],
@@ -104,43 +105,53 @@ async function composeNudge(task: TaskRow, tone: Tone): Promise<string> {
   }
 }
 
-// Decide the next state from the current one. Returns the DB patch + the tone.
 function transition(task: TaskRow): {
   status: string;
   escalation_level: number;
   next_nudge_at: string | null;
   tone: Tone;
 } {
-  const status = task.status;
+  // Delegated: keep checking with the user ~daily until they confirm done.
+  if (task.delegated_to) {
+    return {
+      status: task.status === "open" ? "reminded" : task.status,
+      escalation_level: task.escalation_level ?? 0,
+      next_nudge_at: isoIn(1 * DAYS),
+      tone: "delegated",
+    };
+  }
 
-  if (status === "open") {
+  // Hard deadline time: remind hourly until done — never auto-stop.
+  if (task.due_at) {
+    const becomingEscalated = task.status !== "open";
+    return {
+      status: becomingEscalated ? "escalated" : "reminded",
+      escalation_level: (task.escalation_level ?? 0) + 1,
+      next_nudge_at: isoIn(1 * HOURS),
+      tone: becomingEscalated ? "strong" : "firm",
+    };
+  }
+
+  // Default gentle → firm → strong → stop.
+  if (task.status === "open") {
     return { status: "reminded", escalation_level: 0, next_nudge_at: isoIn(1 * DAYS), tone: "gentle" };
   }
-
-  if (status === "reminded") {
+  if (task.status === "reminded") {
     return { status: "escalated", escalation_level: 1, next_nudge_at: isoIn(12 * HOURS), tone: "firm" };
   }
-
-  // already escalated — keep escalating, then stop
   const nextLevel = (task.escalation_level ?? 1) + 1;
   let next: string | null;
-  if (nextLevel >= STOP_AFTER_ESCALATIONS) {
-    next = null; // stop auto-nudging; leave flagged on the dashboard
-  } else if (nextLevel === 2) {
-    next = isoIn(6 * HOURS);
-  } else {
-    next = isoIn(1 * DAYS);
-  }
+  if (nextLevel >= STOP_AFTER_ESCALATIONS) next = null;
+  else if (nextLevel === 2) next = isoIn(6 * HOURS);
+  else next = isoIn(1 * DAYS);
   return { status: "escalated", escalation_level: nextLevel, next_nudge_at: next, tone: "strong" };
 }
 
-// Apply one follow-up step for a claimed task.
 export async function runFollowupTransition(task: TaskRow): Promise<void> {
   const sb = supabaseAdmin();
   const t = transition(task);
 
-  // Advance state FIRST (next_nudge_at to its real value) so a concurrent tick
-  // can't pick this up again, THEN send. (spec pitfalls #1, #2)
+  // Advance state FIRST so a concurrent tick can't re-grab it, THEN send.
   const { error } = await sb
     .from("tasks")
     .update({
@@ -157,14 +168,12 @@ export async function runFollowupTransition(task: TaskRow): Promise<void> {
     return;
   }
 
-  // If we've hit the cap, go quiet — don't send a final spam nudge.
-  const reachedCap =
-    task.status === "escalated" && t.next_nudge_at === null;
-  if (reachedCap) {
+  // Default mode can hit the cap and go quiet (flagged on the dashboard).
+  if (!task.delegated_to && !task.due_at && task.status === "escalated" && t.next_nudge_at === null) {
     console.info(`[followup] task ${task.id} hit nudge cap; flagged, not sending`);
     return;
   }
 
   const text = await composeNudge(task, t.tone);
-  await sendMessage(text, { buttons: followupButtons(task.id) });
+  await sendMessage(text, { buttons: followupKeyboard(task.id, Boolean(task.delegated_to)) });
 }

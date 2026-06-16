@@ -1,7 +1,7 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import { anthropic } from "@/lib/llm/anthropic";
-import { ANTHROPIC_MODEL } from "@/lib/config";
+import { modelFor, complexityForKind, type Complexity } from "@/lib/llm/models";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { searchMemory } from "@/lib/memory";
 import { buildSystemPrompt } from "@/lib/agent/systemPrompt";
@@ -61,8 +61,12 @@ export async function runAgent(params: {
   inboundText?: string;
   contextHint?: string;
   chatId?: string;
+  complexity?: Complexity; // override the model tier
+  model?: string; // hard override
 }): Promise<string> {
   const { trigger, userId } = params;
+  const model =
+    params.model ?? modelFor(params.complexity ?? complexityForKind(trigger));
   const proactive = trigger !== "inbound";
   const sb = supabaseAdmin();
 
@@ -121,7 +125,7 @@ export async function runAgent(params: {
   try {
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       const resp = await client.messages.create({
-        model: ANTHROPIC_MODEL,
+        model,
         max_tokens: MAX_TOKENS,
         system,
         messages: convo,
