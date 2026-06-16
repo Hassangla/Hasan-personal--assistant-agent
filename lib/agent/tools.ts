@@ -557,7 +557,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "set_email_mode",
     description:
-      "Set whether the agent may SEND email replies for an area, or only DRAFT them. Default for every area is draft-only.",
+      "Configure an AREA's default email behavior (send vs draft-only). This changes a SETTING only — it never sends any email. To send a drafted reply, use send_pending_reply. Default for every area is draft-only.",
     reversible: true,
     resourceType: "area",
     input_schema: {
@@ -576,6 +576,44 @@ export const TOOLS: ToolDef[] = [
       const meta = { ...((cur?.metadata as any) ?? {}), email_mode: input.mode };
       await sb.from("entities").update({ metadata: meta }).eq("id", areaId);
       return { area: input.area, email_mode: input.mode };
+    },
+  },
+
+  {
+    name: "send_pending_reply",
+    description:
+      "Send the most-recent pending EMAIL DRAFT — use ONLY when the user explicitly approves sending it (e.g. 'send it', 'yes, send the reply'). Respects the area's send/draft-only mode. Never use set_email_mode to send.",
+    reversible: true,
+    resourceType: "email",
+    input_schema: { type: "object", properties: {} },
+    handler: async (_input, ctx) => {
+      const { sendLatestPendingReply } = await import("@/lib/email/process");
+      return { status: await sendLatestPendingReply(ctx.userId) };
+    },
+  },
+
+  {
+    name: "get_pending_reply",
+    description: "Read the most-recent pending email draft (recipient, subject, body), if one exists.",
+    reversible: true,
+    input_schema: { type: "object", properties: {} },
+    handler: async (_input, ctx) => {
+      const { getLatestPendingReply } = await import("@/lib/email/process");
+      const p = await getLatestPendingReply(ctx.userId);
+      if (!p) return { pending: false };
+      return { pending: true, to: p.payload.to, subject: p.payload.subject, body: p.payload.body };
+    },
+  },
+
+  {
+    name: "cancel_pending_reply",
+    description: "Cancel/discard the most-recent pending email draft.",
+    reversible: true,
+    resourceType: "email",
+    input_schema: { type: "object", properties: {} },
+    handler: async (_input, ctx) => {
+      const { cancelLatestPendingReply } = await import("@/lib/email/process");
+      return { status: await cancelLatestPendingReply(ctx.userId) };
     },
   },
 
