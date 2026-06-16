@@ -21,9 +21,18 @@ export type DashFollowup = {
   nudge_count: number;
   escalation_level: number;
 };
+export type LedgerItem = {
+  id: string;
+  title: string;
+  status: string;
+  completed_at: string | null;
+  due_at: string | null;
+  reason: string | null;
+};
 export type DashboardData = {
   today: DashTask[];
   followups: DashFollowup[];
+  ledger: LedgerItem[];
   areas: { id: string; name: string; checkin: string | null }[];
   habits: { name: string; streak: number; today: boolean }[];
   expenses: {
@@ -53,6 +62,8 @@ export async function getDashboardData(): Promise<DashboardData> {
   const [
     todayRes,
     followRes,
+    ledgerRes,
+    reasonRes,
     areaRes,
     checkinRes,
     habitRes,
@@ -76,6 +87,22 @@ export async function getDashboardData(): Promise<DashboardData> {
       .in("status", ["reminded", "escalated"])
       .order("next_nudge_at", { ascending: true })
       .limit(8),
+    // Recent tasks across ALL statuses — the done / not-done ledger.
+    sb
+      .from("tasks")
+      .select("id,title,status,completed_at,due_at,updated_at")
+      .eq("user_id", USER_ID)
+      .order("updated_at", { ascending: false })
+      .limit(14),
+    // Outcome reasons live in the audit log (tool-call payloads).
+    sb
+      .from("audit_log")
+      .select("resource_id,action,payload,created_at")
+      .eq("user_id", USER_ID)
+      .eq("resource_type", "task")
+      .in("action", ["complete_task", "drop_task", "snooze_task"])
+      .order("created_at", { ascending: false })
+      .limit(60),
     sb
       .from("entities")
       .select("id,name")
@@ -119,6 +146,22 @@ export async function getDashboardData(): Promise<DashboardData> {
       .order("next_touch_at", { ascending: true })
       .limit(8),
   ]);
+
+  // Latest reason per task from the audit log.
+  const reasonByTask = new Map<string, string>();
+  for (const r of (reasonRes.data ?? []) as any[]) {
+    const id = r.resource_id as string | null;
+    const reason = r.payload?.reason as string | undefined;
+    if (id && reason && !reasonByTask.has(id)) reasonByTask.set(id, reason);
+  }
+  const ledger = ((ledgerRes.data ?? []) as any[]).map((t) => ({
+    id: t.id,
+    title: t.title,
+    status: t.status,
+    completed_at: t.completed_at,
+    due_at: t.due_at,
+    reason: reasonByTask.get(t.id) ?? null,
+  }));
 
   // Areas + latest check-in today.
   const checkinByArea = new Map<string, string>();
@@ -173,6 +216,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   return {
     today: (todayRes.data ?? []) as DashTask[],
     followups: (followRes.data ?? []) as DashFollowup[],
+    ledger,
     areas,
     habits,
     expenses: { totals, recent: (recentExpRes.data ?? []) as any },

@@ -65,11 +65,11 @@ function fallbackNudge(task: TaskRow, tone: Tone): string {
   const due = task.due_at ? ` (due ${formatDue(task.due_at)})` : "";
   switch (tone) {
     case "gentle":
-      return `Reminder: "${task.title}"${due}. Want me to mark it done?`;
+      return `Reminder: "${task.title}"${due}. Did you get to it? If not, what's the plan?`;
     case "firm":
-      return `Still open: "${task.title}"${due}. Done, snooze, or drop?`;
+      return `Still open: "${task.title}"${due}. Done, or should we postpone — what's blocking?`;
     case "strong":
-      return `"${task.title}" has been open a while (nudge #${(task.nudge_count ?? 0) + 1}). Want me to drop it, or are you on it?`;
+      return `"${task.title}" has been open a while (nudge #${(task.nudge_count ?? 0) + 1}). Is it done, postponed, or should I drop it — and what's the reason?`;
   }
 }
 
@@ -83,7 +83,7 @@ async function composeNudge(task: TaskRow, tone: Tone): Promise<string> {
       : tone === "firm"
         ? "Firmly nudge them — this is slipping. One or two short lines."
         : "This has been ignored repeatedly. Nudge strongly and ask whether you should drop it. Two short lines max.";
-  const prompt = `A tracked task is overdue for follow-up: "${task.title}".${due} Nudge count so far: ${task.nudge_count ?? 0}. ${toneInstruction} Match the user's language. Write ONLY the message body — no preamble.`;
+  const prompt = `A tracked task is overdue for follow-up: "${task.title}".${due} Nudge count so far: ${task.nudge_count ?? 0}. ${toneInstruction} Ask plainly whether it's done; if not, ask the reason and whether to postpone (and to when). Match the user's language. Write ONLY the message body — no preamble.`;
 
   try {
     const resp = await anthropic().messages.create({
