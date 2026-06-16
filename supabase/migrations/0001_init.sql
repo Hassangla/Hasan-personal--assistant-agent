@@ -13,7 +13,9 @@ create extension if not exists vector;
 
 -- --- updated_at helper --------------------------------------------------------
 create or replace function set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+set search_path = ''
+as $$
 begin
   new.updated_at = now();
   return new;
@@ -238,7 +240,7 @@ alter table scheduled_jobs enable row level security;
 -- Ambient-memory retrieval: top-N memory chunks by cosine similarity.
 create or replace function match_memory_chunks(
   p_user_id text,
-  query_embedding vector(1536),
+  query_embedding public.vector(1536),
   match_count int default 12
 )
 returns table (
@@ -248,17 +250,19 @@ returns table (
   source_id uuid,
   similarity float
 )
-language sql stable as $$
+language sql stable
+set search_path = ''
+as $$
   select
     mc.id,
     mc.text,
     mc.source_type,
     mc.source_id,
-    1 - (mc.embedding <=> query_embedding) as similarity
-  from memory_chunks mc
+    1 - (mc.embedding operator(public.<=>) query_embedding) as similarity
+  from public.memory_chunks mc
   where mc.user_id = p_user_id
     and mc.embedding is not null
-  order by mc.embedding <=> query_embedding
+  order by mc.embedding operator(public.<=>) query_embedding
   limit match_count;
 $$;
 
@@ -267,13 +271,15 @@ $$;
 -- follow-up transition then writes the real next_nudge_at. Prevents nudge
 -- storms and double-sending (spec pitfalls #1, #2).
 create or replace function claim_due_tasks(p_user_id text, p_limit int default 25)
-returns setof tasks
-language plpgsql as $$
+returns setof public.tasks
+language plpgsql
+set search_path = ''
+as $$
 declare
-  r tasks%rowtype;
+  r public.tasks%rowtype;
 begin
   for r in
-    select * from tasks
+    select * from public.tasks
     where user_id = p_user_id
       and next_nudge_at is not null
       and next_nudge_at <= now()
@@ -282,7 +288,7 @@ begin
     limit p_limit
     for update skip locked
   loop
-    update tasks
+    update public.tasks
       set next_nudge_at = now() + interval '5 minutes'
       where id = r.id;
     return next r;   -- pre-update snapshot drives the transition logic
@@ -292,13 +298,15 @@ $$;
 
 -- Claim-then-act for stale relationships.
 create or replace function claim_due_interactions(p_user_id text, p_limit int default 25)
-returns setof interactions
-language plpgsql as $$
+returns setof public.interactions
+language plpgsql
+set search_path = ''
+as $$
 declare
-  r interactions%rowtype;
+  r public.interactions%rowtype;
 begin
   for r in
-    select * from interactions
+    select * from public.interactions
     where user_id = p_user_id
       and next_touch_at is not null
       and next_touch_at <= now()
@@ -306,7 +314,7 @@ begin
     limit p_limit
     for update skip locked
   loop
-    update interactions
+    update public.interactions
       set next_touch_at = now() + interval '1 day'
       where id = r.id;
     return next r;
@@ -316,13 +324,15 @@ $$;
 
 -- Claim-then-act for scheduled jobs.
 create or replace function claim_due_jobs(p_user_id text, p_limit int default 25)
-returns setof scheduled_jobs
-language plpgsql as $$
+returns setof public.scheduled_jobs
+language plpgsql
+set search_path = ''
+as $$
 declare
-  r scheduled_jobs%rowtype;
+  r public.scheduled_jobs%rowtype;
 begin
   for r in
-    select * from scheduled_jobs
+    select * from public.scheduled_jobs
     where user_id = p_user_id
       and active
       and next_run_at is not null
@@ -331,7 +341,7 @@ begin
     limit p_limit
     for update skip locked
   loop
-    update scheduled_jobs
+    update public.scheduled_jobs
       set next_run_at = now() + interval '10 minutes'
       where id = r.id;
     return next r;
@@ -343,11 +353,13 @@ $$;
 -- fire later (spec pitfall #5). Returns the number expired.
 create or replace function expire_stale_confirmations(p_user_id text, p_max_age interval default interval '24 hours')
 returns int
-language plpgsql as $$
+language plpgsql
+set search_path = ''
+as $$
 declare
   n int;
 begin
-  update confirmations
+  update public.confirmations
     set status = 'expired', resolved_at = now()
     where user_id = p_user_id
       and status = 'pending'
