@@ -183,7 +183,10 @@ export const TOOLS: ToolDef[] = [
     resourceType: "task",
     input_schema: {
       type: "object",
-      properties: { task_id: { type: "string" } },
+      properties: {
+        task_id: { type: "string" },
+        reason: { type: "string", description: "Optional note on how/why it was completed." },
+      },
       required: ["task_id"],
     },
     handler: async (input, ctx) => {
@@ -216,6 +219,7 @@ export const TOOLS: ToolDef[] = [
       properties: {
         task_id: { type: "string" },
         until: { type: "string", description: "ISO-8601 time to resurface the task." },
+        reason: { type: "string", description: "Why it's being postponed (the user's stated reason)." },
       },
       required: ["task_id", "until"],
     },
@@ -242,7 +246,10 @@ export const TOOLS: ToolDef[] = [
     resourceType: "task",
     input_schema: {
       type: "object",
-      properties: { task_id: { type: "string" } },
+      properties: {
+        task_id: { type: "string" },
+        reason: { type: "string", description: "Why it's being dropped (the user's stated reason)." },
+      },
       required: ["task_id"],
     },
     handler: async (input, ctx) => {

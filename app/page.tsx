@@ -1,5 +1,5 @@
 import { getDashboardData } from "@/lib/dashboard/queries";
-import { Section, Empty, Pill, Badge, Dot } from "@/components/dashboard/ui";
+import { Section, Empty, Pill, Badge, Dot, type Tone } from "@/components/dashboard/ui";
 import { CaptureBar } from "@/components/dashboard/CaptureBar";
 import { Clock } from "@/components/dashboard/Clock";
 import { USER_TIMEZONE } from "@/lib/config";
@@ -44,9 +44,29 @@ function initials(name: string): string {
   return parts.map((w) => w[0]?.toUpperCase() ?? "").join("") || "·";
 }
 
+// Status → glyph + pill tone + label for the ledger.
+const LEDGER: Record<string, { glyph: string; tone: Tone; label: string }> = {
+  done: { glyph: "✓", tone: "good", label: "done" },
+  dropped: { glyph: "⊘", tone: "muted", label: "dropped" },
+  snoozed: { glyph: "⏸", tone: "warm", label: "postponed" },
+  escalated: { glyph: "‼", tone: "hot", label: "escalated" },
+  reminded: { glyph: "•", tone: "warm", label: "reminded" },
+  open: { glyph: "○", tone: "cool", label: "open" },
+};
+
+// Static class strings so Tailwind's JIT picks them up.
+const GLYPH_COLOR: Record<Tone, string> = {
+  good: "text-good",
+  hot: "text-hot",
+  warm: "text-warm",
+  cool: "text-cool",
+  muted: "text-faint",
+};
+
 export default async function Dashboard() {
   const d = await getDashboardData();
   const longDate = inTz({ weekday: "long", day: "numeric", month: "long" });
+  const doneCount = d.ledger.filter((t) => t.status === "done").length;
 
   return (
     <div className="min-h-screen">
@@ -142,10 +162,59 @@ export default async function Dashboard() {
             )}
           </Section>
 
-          {/* FIVE AREAS */}
+          {/* TASK LEDGER — executed vs not, with reasons */}
           <Section
             index="04"
-            label="Five Areas"
+            label="Task Ledger"
+            meta={`${doneCount} done · ${d.ledger.length} recent`}
+            className="lg:col-span-3"
+          >
+            {d.ledger.length ? (
+              <ul className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2">
+                {d.ledger.map((t) => {
+                  const s = LEDGER[t.status] ?? LEDGER.open!;
+                  const when =
+                    t.status === "done" ? t.completed_at : t.due_at;
+                  return (
+                    <li key={t.id} className="flex items-start gap-2.5">
+                      <span className={`mt-0.5 font-mono ${GLYPH_COLOR[s.tone]}`}>
+                        {s.glyph}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`min-w-0 flex-1 truncate text-sm ${
+                              t.status === "done" || t.status === "dropped"
+                                ? "text-muted line-through decoration-faint"
+                                : "text-text"
+                            }`}
+                          >
+                            {t.title}
+                          </span>
+                          <Pill tone={s.tone}>{s.label}</Pill>
+                          <span className="shrink-0 font-mono text-[10px] text-faint">
+                            {fmtWhen(when)}
+                          </span>
+                        </div>
+                        {t.reason && (
+                          <div className="mt-0.5 truncate text-xs text-muted">
+                            <span className="text-faint">reason:</span> {t.reason}
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <Empty>No tasks yet — once you capture some, their outcomes show here.</Empty>
+            )}
+          </Section>
+
+          {/* FIVE AREAS */}
+          <Section
+            index="05"
+            label="Areas"
             meta="today's check-in"
             className="lg:col-span-2"
           >
@@ -176,7 +245,7 @@ export default async function Dashboard() {
           </Section>
 
           {/* HABITS */}
-          <Section index="05" label="Habits" meta="streaks">
+          <Section index="06" label="Habits" meta="streaks">
             {d.habits.length ? (
               <ul className="space-y-2.5">
                 {d.habits.map((h, i) => (
@@ -197,7 +266,7 @@ export default async function Dashboard() {
           </Section>
 
           {/* EXPENSES */}
-          <Section index="06" label="Expenses" meta="month to date">
+          <Section index="07" label="Expenses" meta="month to date">
             {d.expenses.totals.length ? (
               <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
                 {d.expenses.totals.map((t, i) => (
@@ -231,7 +300,7 @@ export default async function Dashboard() {
           </Section>
 
           {/* PEOPLE */}
-          <Section index="07" label="People" meta="reconnect">
+          <Section index="08" label="People" meta="reconnect">
             {d.people.length ? (
               <ul className="space-y-2.5">
                 {d.people.map((p) => (
@@ -252,7 +321,7 @@ export default async function Dashboard() {
           </Section>
 
           {/* REVIEW */}
-          <Section index="08" label="Review" meta="weekly">
+          <Section index="09" label="Review" meta="weekly">
             <Empty>The agent-drafted weekly review lands in Part 3.</Empty>
           </Section>
         </div>
