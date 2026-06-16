@@ -92,19 +92,32 @@ type ScheduledJob = {
 async function runScheduledJob(job: ScheduledJob): Promise<void> {
   const sb = supabaseAdmin();
   const cfg = job.config ?? {};
-  const hint =
-    job.kind === "checkin"
-      ? cfg.prompt ?? "Run a short check-in across the user's life areas."
-      : job.kind === "digest"
-        ? "Send the user a brief morning digest."
-        : job.kind === "review"
-          ? "Draft the user's weekly review."
-          : `Run scheduled job: ${job.kind}.`;
+
+  let hint: string;
+  if (job.kind === "checkin") {
+    // Pull the (possibly renamed) life areas so the prompt reflects them.
+    const { data: areas } = await sb
+      .from("entities")
+      .select("name")
+      .eq("user_id", USER_ID)
+      .eq("kind", "area")
+      .order("created_at", { ascending: true });
+    const names = (areas ?? []).map((a: { name: string }) => a.name).join(", ");
+    const label = cfg.label ? `(${cfg.label}) ` : "";
+    const base = cfg.prompt ?? "Run a short check-in across the user's life areas.";
+    hint = `${label}${base}${names ? ` The user's life areas are: ${names}.` : ""} Send ONE short Telegram message inviting a quick reply; when the user replies you'll log it into check-ins and create any tasks/habits/expenses it implies.`;
+  } else if (job.kind === "digest") {
+    hint = "Send the user a brief morning digest.";
+  } else if (job.kind === "review") {
+    hint = "Draft the user's weekly review.";
+  } else {
+    hint = `Run scheduled job: ${job.kind}.`;
+  }
 
   const text = await runAgent({ trigger: "tick", userId: USER_ID, contextHint: hint });
   if (text) await sendMessage(text);
 
-  // Advance to the next run (real cadence handling lands with Parts 2–3).
+  // Advance to the next run by the job's cadence (daily by default).
   const everyHours = Number(cfg.every_hours ?? 24);
   await sb
     .from("scheduled_jobs")

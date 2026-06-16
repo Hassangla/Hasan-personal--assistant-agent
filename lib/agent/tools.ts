@@ -2,7 +2,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { storeMemory, searchMemory } from "@/lib/memory";
 import { sendMessage } from "@/lib/telegram/client";
-import { USER_TIMEZONE } from "@/lib/config";
+import { userToday } from "@/lib/config";
 
 // ---------------------------------------------------------------------------
 // Tool registry. Each tool declares a JSON schema, a `reversible` flag, and a
@@ -37,16 +37,6 @@ function toIso(value?: string | null): string | null {
   if (!value) return null;
   const t = Date.parse(value);
   return Number.isNaN(t) ? null : new Date(t).toISOString();
-}
-
-// "today" in the user's timezone, as YYYY-MM-DD.
-function userToday(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: USER_TIMEZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
 }
 
 async function findOrCreateEntity(
