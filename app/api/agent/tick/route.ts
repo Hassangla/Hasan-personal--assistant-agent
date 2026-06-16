@@ -4,6 +4,8 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { runAgent } from "@/lib/agent/core";
 import { runFollowupTransition, type TaskRow } from "@/lib/agent/followup";
 import { sendMessage } from "@/lib/telegram/client";
+import { nextLocalTimeUtc } from "@/lib/time";
+import type { Complexity } from "@/lib/llm/models";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -89,42 +91,101 @@ type ScheduledJob = {
   config: Record<string, any> | null;
 };
 
+// Today's active tasks → a morning briefing prompt (day + suggested priorities
+// + clarify area-less tasks + ask about schedule).
+async function buildMorningHint(): Promise<string> {
+  const sb = supabaseAdmin();
+  const { data: tasks } = await sb
+    .from("tasks")
+    .select("title, due_at, area_id, urgency")
+    .eq("user_id", USER_ID)
+    .in("status", ["open", "reminded", "escalated", "snoozed"])
+    .order("priority_score", { ascending: false })
+    .limit(15);
+  const rows = (tasks ?? []) as any[];
+  const lines = rows
+    .map((t) => `- ${t.title}${t.due_at ? ` (due ${t.due_at} UTC)` : ""}${t.area_id ? "" : " [no area]"}`)
+    .join("\n");
+  const ambiguous = rows.filter((t) => !t.area_id).map((t) => t.title);
+  return `Morning brief (present all times in the user's timezone). Today's open tasks:\n${lines || "(none)"}\n\nSend one short message: their day at a glance, your suggested top 2–3 priorities (brief why), and ask about their schedule today. ${ambiguous.length ? `Also ask them to clarify the area for: ${ambiguous.join("; ")}.` : ""}`.trim();
+}
+
+async function buildHourlyHint(): Promise<string | null> {
+  const sb = supabaseAdmin();
+  const { data: tasks } = await sb
+    .from("tasks")
+    .select("title, due_at")
+    .eq("user_id", USER_ID)
+    .in("status", ["open", "reminded", "escalated"])
+    .order("due_at", { ascending: true, nullsFirst: false })
+    .limit(10);
+  const rows = (tasks ?? []) as any[];
+  if (rows.length === 0) return null;
+  const lines = rows.map((t) => `- ${t.title}${t.due_at ? ` (due ${t.due_at} UTC)` : ""}`).join("\n");
+  return `Hourly review (present times in the user's timezone). Active tasks:\n${lines}\n\nSend a very short review: what's still open and anything due soon. One or two lines.`;
+}
+
+async function buildPlanReviewHint(): Promise<string | null> {
+  const sb = supabaseAdmin();
+  const { data: plans } = await sb
+    .from("plans")
+    .select("id, horizon, title")
+    .eq("user_id", USER_ID)
+    .eq("status", "active")
+    .not("next_review_at", "is", null)
+    .lte("next_review_at", new Date().toISOString())
+    .limit(5);
+  const rows = (plans ?? []) as any[];
+  if (rows.length === 0) return null;
+  const lines = rows.map((p) => `- [${p.horizon}] ${p.title}`).join("\n");
+  return `These plans are due for review:\n${lines}\n\nWalk the user through reviewing them (progress, blockers, next steps), then call update_plan to advance each plan's next_review.`;
+}
+
 async function runScheduledJob(job: ScheduledJob): Promise<void> {
   const sb = supabaseAdmin();
   const cfg = job.config ?? {};
+  const kind = job.kind ?? "";
 
-  let hint: string;
-  if (job.kind === "checkin") {
-    // Pull the (possibly renamed) life areas so the prompt reflects them.
-    const { data: areas } = await sb
-      .from("entities")
-      .select("name")
-      .eq("user_id", USER_ID)
-      .eq("kind", "area")
-      .order("created_at", { ascending: true });
-    const names = (areas ?? []).map((a: { name: string }) => a.name).join(", ");
-    const label = cfg.label ? `(${cfg.label}) ` : "";
-    const base = cfg.prompt ?? "Run a short check-in across the user's life areas.";
-    hint = `${label}${base}${names ? ` The user's life areas are: ${names}.` : ""} Send ONE short Telegram message inviting a quick reply; when the user replies you'll log it into check-ins and create any tasks/habits/expenses it implies.`;
-  } else if (job.kind === "digest") {
-    hint = "Send the user a brief morning digest.";
-  } else if (job.kind === "review") {
-    hint = "Draft the user's weekly review.";
+  let hint: string | null;
+  let complexity: Complexity = cfg.complexity === "complex" ? "complex" : "simple";
+
+  if (kind === "morning_brief") {
+    hint = await buildMorningHint();
+    complexity = "complex";
+  } else if (kind === "evening_schedule") {
+    hint =
+      "Evening: in one short message, ask the user about tomorrow's schedule and anything to carry over. Invite a quick reply.";
+    complexity = "complex";
+  } else if (kind === "hourly_review") {
+    hint = await buildHourlyHint();
+    complexity = "simple";
+  } else if (kind === "plan_review") {
+    hint = await buildPlanReviewHint();
+    complexity = "complex";
   } else {
-    hint = `Run scheduled job: ${job.kind}.`;
+    hint = `Run scheduled job: ${kind}.`;
   }
 
-  const text = await runAgent({ trigger: "tick", userId: USER_ID, contextHint: hint });
-  if (text) await sendMessage(text);
+  if (hint) {
+    const text = await runAgent({
+      trigger: "tick",
+      userId: USER_ID,
+      contextHint: hint,
+      complexity,
+    });
+    if (text) await sendMessage(text);
+  }
 
-  // Advance to the next run by the job's cadence (daily by default).
-  const everyHours = Number(cfg.every_hours ?? 24);
-  await sb
-    .from("scheduled_jobs")
-    .update({
-      next_run_at: new Date(Date.now() + everyHours * 3600000).toISOString(),
-    })
-    .eq("id", job.id);
+  // Advance: timezone-anchored local time, or a fixed interval.
+  let nextRun: string;
+  if (cfg.at_local) {
+    const [hs, ms] = String(cfg.at_local).split(":");
+    nextRun = nextLocalTimeUtc(Number(hs), Number(ms ?? 0)).toISOString();
+  } else {
+    const everyHours = Number(cfg.every_hours ?? 24);
+    nextRun = new Date(Date.now() + everyHours * 3600000).toISOString();
+  }
+  await sb.from("scheduled_jobs").update({ next_run_at: nextRun }).eq("id", job.id);
 }
 
 export async function GET(req: Request) {

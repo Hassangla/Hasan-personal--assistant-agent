@@ -28,6 +28,7 @@ export type LedgerItem = {
   completed_at: string | null;
   due_at: string | null;
   reason: string | null;
+  delegated_to: string | null;
 };
 export type DashboardData = {
   today: DashTask[];
@@ -46,6 +47,7 @@ export type DashboardData = {
     }[];
   };
   people: { id: string; name: string; summary: string | null; next_touch_at: string | null }[];
+  plans: { id: string; horizon: string; title: string; status: string; next_review_at: string | null }[];
 };
 
 function ymd(d: Date): string {
@@ -71,6 +73,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     monthExpRes,
     recentExpRes,
     peopleRes,
+    plansRes,
   ] = await Promise.all([
     sb
       .from("tasks")
@@ -90,7 +93,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     // Recent tasks across ALL statuses — the done / not-done ledger.
     sb
       .from("tasks")
-      .select("id,title,status,completed_at,due_at,updated_at")
+      .select("id,title,status,completed_at,due_at,updated_at,delegated_to")
       .eq("user_id", USER_ID)
       .order("updated_at", { ascending: false })
       .limit(14),
@@ -145,6 +148,13 @@ export async function getDashboardData(): Promise<DashboardData> {
       .lte("next_touch_at", soonIso)
       .order("next_touch_at", { ascending: true })
       .limit(8),
+    sb
+      .from("plans")
+      .select("id, horizon, title, status, next_review_at")
+      .eq("user_id", USER_ID)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(12),
   ]);
 
   // Latest reason per task from the audit log.
@@ -161,6 +171,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     completed_at: t.completed_at,
     due_at: t.due_at,
     reason: reasonByTask.get(t.id) ?? null,
+    delegated_to: t.delegated_to ?? null,
   }));
 
   // Areas + latest check-in today.
@@ -221,5 +232,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     habits,
     expenses: { totals, recent: (recentExpRes.data ?? []) as any },
     people,
+    plans: (plansRes.data ?? []) as any,
   };
 }

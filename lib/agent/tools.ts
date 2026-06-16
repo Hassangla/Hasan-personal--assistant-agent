@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { storeMemory, searchMemory } from "@/lib/memory";
 import { sendMessage } from "@/lib/telegram/client";
 import { userToday } from "@/lib/config";
+import { sendTaskOptions } from "@/lib/telegram/keyboards";
+import { AREAS } from "@/lib/areas";
 
 // ---------------------------------------------------------------------------
 // Tool registry. Each tool declares a JSON schema, a `reversible` flag, and a
@@ -67,6 +69,21 @@ async function findOrCreateEntity(
   return (created?.id as string) ?? null;
 }
 
+// Snap an area name to one of the seven canonical areas (never invents new
+// ones). Returns null when it doesn't match — the caller then asks via buttons.
+async function resolveAreaId(userId: string, name?: string): Promise<string | null> {
+  if (!name?.trim()) return null;
+  const n = name.trim().toLowerCase();
+  const match = AREAS.find(
+    (a) =>
+      a.toLowerCase() === n ||
+      n.includes(a.toLowerCase()) ||
+      (n.length >= 3 && a.toLowerCase().includes(n)),
+  );
+  if (!match) return null;
+  return findOrCreateEntity(userId, "area", match);
+}
+
 // Default a nudge to fire before the deadline (24h prior, but never in the past).
 function defaultNudge(dueIso: string | null): string | null {
   if (!dueIso) return null;
@@ -101,7 +118,7 @@ export const TOOLS: ToolDef[] = [
     },
     handler: async (input, ctx) => {
       const sb = supabaseAdmin();
-      const areaId = await findOrCreateEntity(ctx.userId, "area", input.area);
+      const areaId = await resolveAreaId(ctx.userId, input.area);
       const personId = await findOrCreateEntity(ctx.userId, "person", input.person);
       const dueIso = toIso(input.due_at);
       const nudge = toIso(input.next_nudge_at) ?? defaultNudge(dueIso);
@@ -122,6 +139,14 @@ export const TOOLS: ToolDef[] = [
         .select("id, title, status, due_at, next_nudge_at")
         .single();
       if (error) throw new Error(`create_task: ${error.message}`);
+      // Buttons-first: when no area was stated, ask via inline area buttons.
+      if (!areaId && data) {
+        try {
+          await sendTaskOptions(data.id as string, input.title, true, ctx.chatId);
+        } catch (e) {
+          console.error("[create_task] sendTaskOptions failed:", e);
+        }
+      }
       return { ...data };
     },
   },
@@ -162,7 +187,7 @@ export const TOOLS: ToolDef[] = [
       if (input.next_nudge_at !== undefined) patch.next_nudge_at = toIso(input.next_nudge_at);
       if (input.urgency !== undefined) patch.urgency = input.urgency;
       if (input.priority_score !== undefined) patch.priority_score = input.priority_score;
-      if (input.area !== undefined) patch.area_id = await findOrCreateEntity(ctx.userId, "area", input.area);
+      if (input.area !== undefined) patch.area_id = await resolveAreaId(ctx.userId, input.area);
       if (input.person !== undefined) patch.person_id = await findOrCreateEntity(ctx.userId, "person", input.person);
       const { data, error } = await sb
         .from("tasks")
@@ -390,7 +415,7 @@ export const TOOLS: ToolDef[] = [
     },
     handler: async (input, ctx) => {
       const sb = supabaseAdmin();
-      const areaId = await findOrCreateEntity(ctx.userId, "area", input.area);
+      const areaId = await resolveAreaId(ctx.userId, input.area);
       let { data: habit } = await sb
         .from("habits")
         .select("id")
@@ -477,7 +502,7 @@ export const TOOLS: ToolDef[] = [
     },
     handler: async (input, ctx) => {
       const sb = supabaseAdmin();
-      const areaId = await findOrCreateEntity(ctx.userId, "area", input.area);
+      const areaId = await resolveAreaId(ctx.userId, input.area);
       const { data, error } = await sb
         .from("checkins")
         .insert({
@@ -599,6 +624,140 @@ export const TOOLS: ToolDef[] = [
     reversible: true,
     input_schema: { type: "object", properties: {} },
     handler: async () => ({ connected: false, note: "Email isn't connected yet (Part 4)." }),
+  },
+
+  {
+    name: "delegate_task",
+    description:
+      "Mark a task as delegated to someone else. Keep following up with the USER (not the delegate) until they confirm it's fully complete.",
+    reversible: true,
+    resourceType: "task",
+    input_schema: {
+      type: "object",
+      properties: {
+        task_id: { type: "string" },
+        person: { type: "string", description: "Who it's delegated to." },
+        next_check_in: { type: "string", description: "ISO-8601 next check; defaults to ~1 day." },
+      },
+      required: ["task_id", "person"],
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      const next = toIso(input.next_check_in) ?? new Date(Date.now() + 86400000).toISOString();
+      const { data, error } = await sb
+        .from("tasks")
+        .update({ delegated_to: input.person, status: "open", next_nudge_at: next })
+        .eq("id", input.task_id)
+        .eq("user_id", ctx.userId)
+        .select("id, title, delegated_to, next_nudge_at")
+        .single();
+      if (error) throw new Error(`delegate_task: ${error.message}`);
+      return { ...data };
+    },
+  },
+
+  {
+    name: "create_plan",
+    description:
+      "Create a short / medium / long-term plan and set a review cadence (short≈weekly, medium≈monthly, long≈quarterly) unless next_review is given.",
+    reversible: true,
+    resourceType: "plan",
+    input_schema: {
+      type: "object",
+      properties: {
+        horizon: { type: "string", enum: ["short", "medium", "long"] },
+        title: { type: "string" },
+        body: { type: "string", description: "The plan details / milestones." },
+        next_review: { type: "string", description: "ISO-8601 first review; optional." },
+      },
+      required: ["horizon", "title"],
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      const days = input.horizon === "short" ? 7 : input.horizon === "medium" ? 30 : 90;
+      const nextReview = toIso(input.next_review) ?? new Date(Date.now() + days * 86400000).toISOString();
+      const { data, error } = await sb
+        .from("plans")
+        .insert({
+          user_id: ctx.userId,
+          horizon: input.horizon,
+          title: input.title,
+          body: input.body ?? null,
+          next_review_at: nextReview,
+        })
+        .select("id, horizon, title, next_review_at")
+        .single();
+      if (error) throw new Error(`create_plan: ${error.message}`);
+      await storeMemory({
+        userId: ctx.userId,
+        sourceType: "plan",
+        sourceId: data!.id,
+        text: `${input.horizon} plan: ${input.title}. ${input.body ?? ""}`,
+      });
+      return { ...data };
+    },
+  },
+
+  {
+    name: "list_plans",
+    description: "List the user's plans, optionally filtered by horizon.",
+    reversible: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        horizon: { type: "string", enum: ["short", "medium", "long"] },
+        status: { type: "string", enum: ["active", "done", "archived"] },
+      },
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      let q = sb
+        .from("plans")
+        .select("id, horizon, title, body, status, next_review_at")
+        .eq("user_id", ctx.userId)
+        .eq("status", input.status ?? "active")
+        .order("created_at", { ascending: false })
+        .limit(25);
+      if (input.horizon) q = q.eq("horizon", input.horizon);
+      const { data, error } = await q;
+      if (error) throw new Error(`list_plans: ${error.message}`);
+      return { plans: data ?? [] };
+    },
+  },
+
+  {
+    name: "update_plan",
+    description: "Edit a plan, advance its next review, or complete/archive it.",
+    reversible: true,
+    resourceType: "plan",
+    input_schema: {
+      type: "object",
+      properties: {
+        plan_id: { type: "string" },
+        title: { type: "string" },
+        body: { type: "string" },
+        status: { type: "string", enum: ["active", "done", "archived"] },
+        next_review: { type: "string" },
+      },
+      required: ["plan_id"],
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      const patch: Record<string, unknown> = {};
+      if (input.title !== undefined) patch.title = input.title;
+      if (input.body !== undefined) patch.body = input.body;
+      if (input.status !== undefined) patch.status = input.status;
+      if (input.next_review !== undefined) patch.next_review_at = toIso(input.next_review);
+      const { data, error } = await sb
+        .from("plans")
+        .update(patch)
+        .eq("id", input.plan_id)
+        .eq("user_id", ctx.userId)
+        .select("id, title, status, next_review_at")
+        .single();
+      if (error) throw new Error(`update_plan: ${error.message}`);
+      return { ...data };
+    },
   },
 
   {

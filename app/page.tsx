@@ -192,6 +192,7 @@ export default async function Dashboard() {
                             {t.title}
                           </span>
                           <Pill tone={s.tone}>{s.label}</Pill>
+                          {t.delegated_to && <Pill tone="cool">→ {t.delegated_to}</Pill>}
                           <span className="shrink-0 font-mono text-[10px] text-faint">
                             {fmtWhen(when)}
                           </span>
@@ -323,6 +324,29 @@ export default async function Dashboard() {
           {/* REVIEW */}
           <Section index="09" label="Review" meta="weekly">
             <Empty>The agent-drafted weekly review lands in Part 3.</Empty>
+          </Section>
+
+          {/* PLANS */}
+          <Section index="10" label="Plans" meta="short · medium · long" className="lg:col-span-3">
+            {d.plans.length ? (
+              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {d.plans.map((p) => (
+                  <li key={p.id} className="flex items-center gap-2 text-sm">
+                    <Pill tone={p.horizon === "long" ? "cool" : p.horizon === "medium" ? "warm" : "good"}>
+                      {p.horizon}
+                    </Pill>
+                    <span className="min-w-0 flex-1 truncate text-text">{p.title}</span>
+                    {p.next_review_at && (
+                      <span className="shrink-0 font-mono text-[10px] text-faint">
+                        review {fmtWhen(p.next_review_at)}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Empty>No plans yet — ask me to draft a short, medium, or long-term plan.</Empty>
+            )}
           </Section>
         </div>
 
