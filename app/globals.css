@@ -8,6 +8,34 @@
 
 html,
 body {
-  background: #0b0d10;
-  color: #e6edf3;
+  background-color: #08090b;
+  color: #d9dee7;
+}
+
+/* Subtle command-center glow behind the canvas. */
+body {
+  background-image:
+    radial-gradient(900px 500px at 50% -8%, rgba(94, 234, 212, 0.05), transparent 60%),
+    radial-gradient(700px 420px at 100% 0%, rgba(92, 200, 245, 0.04), transparent 55%);
+  background-attachment: fixed;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a1e26;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #272c37;
+}
+
+::selection {
+  background: rgba(94, 234, 212, 0.22);
+  color: #eafffb;
 }

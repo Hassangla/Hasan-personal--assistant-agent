@@ -1,11 +1,20 @@
 import { getDashboardData } from "@/lib/dashboard/queries";
-import { Card, Empty } from "@/components/dashboard/ui";
-import { CaptureBox } from "@/components/CaptureBox";
+import { Section, Empty, Pill, Badge, Dot } from "@/components/dashboard/ui";
+import { CaptureBar } from "@/components/dashboard/CaptureBar";
+import { Clock } from "@/components/dashboard/Clock";
 import { USER_TIMEZONE } from "@/lib/config";
 
 // Read-only model: rendered per-request from Supabase. NEVER calls the model on
-// load — the only model call is when you submit the capture box (a user action).
+// load — the only model call is submitting the capture line (a user action).
 export const dynamic = "force-dynamic";
+
+function inTz(opts: Intl.DateTimeFormatOptions): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: USER_TIMEZONE,
+    hour12: false,
+    ...opts,
+  }).format(new Date());
+}
 
 function fmtWhen(iso: string | null): string {
   if (!iso) return "";
@@ -23,152 +32,236 @@ function fmtWhen(iso: string | null): string {
   }
 }
 
+function greeting(): string {
+  const h = Number(inTz({ hour: "2-digit" }));
+  if (h < 12) return "Good morning.";
+  if (h < 18) return "Good afternoon.";
+  return "Good evening.";
+}
+
+function initials(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean).slice(0, 2);
+  return parts.map((w) => w[0]?.toUpperCase() ?? "").join("") || "·";
+}
+
 export default async function Dashboard() {
   const d = await getDashboardData();
+  const longDate = inTz({ weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8">
-      <header className="mb-6">
-        <h1 className="text-xl font-semibold">Personal Agent</h1>
-        <p className="text-sm text-muted">
-          Read-only window · you act through Telegram or the capture box.
-        </p>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-30 border-b border-border bg-bg/80 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5">
+          <div className="flex items-center gap-2 font-mono text-[11px] tracking-[0.22em]">
+            <span className="text-text">PERSONAL AGENT</span>
+            <span className="text-faint">// v0.2</span>
+          </div>
+          <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+            <span className="hidden sm:inline">{longDate}</span>
+            <span className="inline-flex items-center gap-1.5 text-good">
+              <Dot tone="good" />
+              online
+            </span>
+          </div>
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card title="Today" hint="top tasks">
-          {d.today.length ? (
-            <ul className="space-y-2">
-              {d.today.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center justify-between gap-3 text-sm"
-                >
-                  <span className="truncate">{t.title}</span>
-                  <span className="shrink-0 text-xs text-muted">
-                    {fmtWhen(t.due_at)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Empty>No open tasks — capture something below.</Empty>
-          )}
-        </Card>
+      <main className="mx-auto max-w-6xl px-4 py-6">
+        {/* SESSION */}
+        <section className="mb-4 rounded-xl border border-border bg-panel/70 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="font-mono text-[10px] tracking-[0.22em] text-faint">
+                01 // SESSION
+              </div>
+              <h1 className="mt-2 font-serif text-3xl italic leading-tight text-text">
+                {greeting()}
+              </h1>
+              <p className="mt-1.5 text-sm text-muted">
+                Read-only window — you act through Telegram or the capture line.
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <Clock tz={USER_TIMEZONE} />
+              <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+                {USER_TIMEZONE.replace("_", " ")}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 rounded-lg border border-border bg-panel2 px-3.5 py-2.5">
+            <CaptureBar />
+          </div>
+        </section>
 
-        <Card title="Follow-ups in flight" hint="reminded / escalated">
-          {d.followups.length ? (
-            <ul className="space-y-2">
-              {d.followups.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center justify-between gap-3 text-sm"
-                >
-                  <span className="truncate">{t.title}</span>
-                  <span className="shrink-0 rounded bg-bg px-1.5 py-0.5 text-xs text-muted">
-                    {t.status} · nudge {t.nudge_count}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Empty>Nothing being chased right now.</Empty>
-          )}
-        </Card>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* TODAY */}
+          <Section index="02" label="Today" meta={`${d.today.length} open`} className="lg:col-span-2">
+            {d.today.length ? (
+              <ul className="divide-y divide-border/70">
+                {d.today.map((t, i) => (
+                  <li
+                    key={t.id}
+                    className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+                  >
+                    <Badge>P{i + 1}</Badge>
+                    <span className="min-w-0 flex-1 truncate text-sm text-text">
+                      {t.title}
+                    </span>
+                    {t.urgency === "high" && <Pill tone="hot">urgent</Pill>}
+                    <span className="shrink-0 font-mono text-[11px] text-faint">
+                      {fmtWhen(t.due_at) || "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Empty>No open tasks — capture something above.</Empty>
+            )}
+          </Section>
 
-        <Card title="Five Areas" hint="today's check-in">
-          {d.areas.length ? (
-            <ul className="space-y-2">
-              {d.areas.map((a) => (
-                <li key={a.id} className="text-sm">
-                  <span className="text-white">{a.name}</span>
-                  <span className="text-muted">
-                    {" "}
-                    — {a.checkin ?? "no check-in yet"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Empty>No areas seeded yet.</Empty>
-          )}
-        </Card>
+          {/* FOLLOW-UPS */}
+          <Section index="03" label="Follow-ups" meta="in flight">
+            {d.followups.length ? (
+              <ul className="space-y-2.5">
+                {d.followups.map((t) => (
+                  <li key={t.id} className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-sm text-text">
+                      {t.title}
+                    </span>
+                    <Pill tone={t.status === "escalated" ? "hot" : "warm"}>
+                      {t.status}
+                    </Pill>
+                    <span className="shrink-0 font-mono text-[10px] text-faint">
+                      ×{t.nudge_count}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Empty>Nothing being chased.</Empty>
+            )}
+          </Section>
 
-        <Card title="Habits" hint="streaks">
-          {d.habits.length ? (
-            <ul className="space-y-2">
-              {d.habits.map((h, i) => (
-                <li
-                  key={i}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span>
-                    {h.today ? "✅" : "⬜"} {h.name}
-                  </span>
-                  <span className="text-xs text-muted">{h.streak}d streak</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Empty>No habits tracked yet.</Empty>
-          )}
-        </Card>
+          {/* FIVE AREAS */}
+          <Section
+            index="04"
+            label="Five Areas"
+            meta="today's check-in"
+            className="lg:col-span-2"
+          >
+            {d.areas.length ? (
+              <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                {d.areas.map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex items-start gap-2 rounded-lg border border-border bg-panel2/60 px-3 py-2.5"
+                  >
+                    <span className="mt-1">
+                      <Dot tone={a.checkin ? "good" : "muted"} />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+                        {a.name}
+                      </div>
+                      <div className="truncate text-sm text-text">
+                        {a.checkin ?? <span className="text-faint">no check-in yet</span>}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Empty>No areas seeded.</Empty>
+            )}
+          </Section>
 
-        <Card title="Expenses" hint="month to date">
-          <div className="mb-2 flex flex-wrap gap-2">
+          {/* HABITS */}
+          <Section index="05" label="Habits" meta="streaks">
+            {d.habits.length ? (
+              <ul className="space-y-2.5">
+                {d.habits.map((h, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <span className={h.today ? "text-good" : "text-faint"}>
+                      {h.today ? "◉" : "○"}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-text">
+                      {h.name}
+                    </span>
+                    <span className="font-mono text-[11px] text-muted">{h.streak}d</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Empty>No habits tracked.</Empty>
+            )}
+          </Section>
+
+          {/* EXPENSES */}
+          <Section index="06" label="Expenses" meta="month to date">
             {d.expenses.totals.length ? (
-              d.expenses.totals.map((t, i) => (
-                <span
-                  key={i}
-                  className="rounded bg-bg px-2 py-1 text-sm font-medium"
-                >
-                  {t.total.toLocaleString()} {t.currency}
-                </span>
-              ))
+              <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                {d.expenses.totals.map((t, i) => (
+                  <div key={i}>
+                    <span className="font-mono text-xl tabular-nums text-text">
+                      {t.total.toLocaleString()}
+                    </span>{" "}
+                    <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+                      {t.currency}
+                    </span>
+                  </div>
+                ))}
+              </div>
             ) : (
               <Empty>No expenses this month.</Empty>
             )}
-          </div>
-          {d.expenses.recent.length > 0 && (
-            <ul className="space-y-1">
-              {d.expenses.recent.map((e, i) => (
-                <li key={i} className="flex justify-between gap-3 text-xs text-muted">
-                  <span className="truncate">{e.category ?? e.note ?? "expense"}</span>
-                  <span className="shrink-0">
-                    {Number(e.amount).toLocaleString()} {e.currency}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+            {d.expenses.recent.length > 0 && (
+              <ul className="mt-3 space-y-1.5 border-t border-border pt-3">
+                {d.expenses.recent.map((e, i) => (
+                  <li key={i} className="flex justify-between gap-3 text-xs">
+                    <span className="truncate text-muted">
+                      {e.category ?? e.note ?? "expense"}
+                    </span>
+                    <span className="shrink-0 font-mono tabular-nums text-faint">
+                      {Number(e.amount).toLocaleString()} {e.currency}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
 
-        <Card title="People to reconnect" hint="due soon">
-          {d.people.length ? (
-            <ul className="space-y-2">
-              {d.people.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-center justify-between gap-3 text-sm"
-                >
-                  <span className="truncate">{p.name}</span>
-                  <span className="shrink-0 text-xs text-muted">
-                    {fmtWhen(p.next_touch_at)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Empty>No one's overdue for a touch.</Empty>
-          )}
-        </Card>
+          {/* PEOPLE */}
+          <Section index="07" label="People" meta="reconnect">
+            {d.people.length ? (
+              <ul className="space-y-2.5">
+                {d.people.map((p) => (
+                  <li key={p.id} className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-panel2 font-mono text-[10px] text-muted">
+                      {initials(p.name)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-text">
+                      {p.name}
+                    </span>
+                    <Pill tone="warm">due</Pill>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Empty>No one&apos;s overdue for a touch.</Empty>
+            )}
+          </Section>
 
-        <Card title="Last week's review" hint="Part 3">
-          <Empty>The agent-drafted weekly review arrives in Part 3.</Empty>
-        </Card>
-      </div>
+          {/* REVIEW */}
+          <Section index="08" label="Review" meta="weekly">
+            <Empty>The agent-drafted weekly review lands in Part 3.</Empty>
+          </Section>
+        </div>
 
-      <CaptureBox />
-    </main>
+        <footer className="mt-6 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.16em] text-faint">
+          <span>Personal Agent · read-only</span>
+          <span>act via Telegram</span>
+        </footer>
+      </main>
+    </div>
   );
 }
