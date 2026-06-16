@@ -419,3 +419,35 @@ export async function cancelDraft(confId: string): Promise<void> {
     .eq("user_id", USER_ID)
     .eq("status", "pending");
 }
+
+// The most-recent pending email draft (within 24h) — so the conversation/tools
+// can read and act on a draft created by the button flow.
+export async function getLatestPendingReply(
+  userId: string,
+): Promise<{ id: string; payload: any } | null> {
+  const sb = supabaseAdmin();
+  const { data } = await sb
+    .from("confirmations")
+    .select("id, payload")
+    .eq("user_id", userId)
+    .eq("action_type", "send_email_reply")
+    .eq("status", "pending")
+    .gte("created_at", new Date(Date.now() - 24 * 3600000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? { id: data.id as string, payload: (data as any).payload } : null;
+}
+
+export async function sendLatestPendingReply(userId: string): Promise<string> {
+  const p = await getLatestPendingReply(userId);
+  if (!p) return "There's no pending email draft to send.";
+  return sendApprovedReply(p.id);
+}
+
+export async function cancelLatestPendingReply(userId: string): Promise<string> {
+  const p = await getLatestPendingReply(userId);
+  if (!p) return "There's no pending email draft to cancel.";
+  await cancelDraft(p.id);
+  return "Canceled the pending draft.";
+}

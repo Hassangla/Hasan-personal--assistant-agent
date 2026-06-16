@@ -12,6 +12,7 @@ import {
   cancelDraft,
   setDraftBody,
   reshowDraft,
+  getLatestPendingReply,
 } from "@/lib/email/process";
 import {
   sendMessage,
@@ -75,6 +76,9 @@ export async function POST(req: Request) {
     // Pending captures from a prior button tap.
     if (await handlePendingEmailEdit(inboundText, chatId)) return ok();
     if (await handlePendingDelegate(inboundText, chatId)) return ok();
+    // Typed approval/cancel of a pending email draft — handled deterministically
+    // so "send it" can never be misread as a settings change.
+    if (await handleTypedReplyApproval(inboundText, chatId)) return ok();
 
     const reply = await runAgent({
       trigger: "inbound",
@@ -139,6 +143,28 @@ async function handlePendingEmailEdit(text: string, chatId: string): Promise<boo
   await setDraftBody(confId, text);
   await reshowDraft(confId, chatId);
   return true;
+}
+
+// If an email draft is pending and the user types an approval ("send it") or a
+// cancel, act on it directly — never route these to the agent.
+async function handleTypedReplyApproval(text: string, chatId: string): Promise<boolean> {
+  const pending = await getLatestPendingReply(USER_ID);
+  if (!pending) return false;
+  const t = text.trim().toLowerCase().replace(/[.!]+$/g, "").trim();
+  const approve =
+    /^(send|send it|send the (draft|reply|email)|approve( it)?|yes,? ?send( it)?|go ahead( and send( it)?)?|ship it|looks good,? ?send it)$/.test(t);
+  const cancel = /^(cancel( it)?|don'?t send|do not send|discard|never ?mind)$/.test(t);
+  if (approve) {
+    const status = await sendApprovedReply(pending.id);
+    await sendMessage(`✅ ${status}`, { chatId });
+    return true;
+  }
+  if (cancel) {
+    await cancelDraft(pending.id);
+    await sendMessage("✖ Canceled the pending draft.", { chatId });
+    return true;
+  }
+  return false;
 }
 
 async function handleCallback(cb: any): Promise<void> {
