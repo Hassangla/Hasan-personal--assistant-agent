@@ -6,6 +6,14 @@ import { executeTool, runApprovedConfirmation } from "@/lib/agent/execute";
 import { transcribeAudio } from "@/lib/llm/transcribe";
 import { areaByIndex } from "@/lib/areas";
 import {
+  createTaskFromEmail,
+  draftReply,
+  sendApprovedReply,
+  cancelDraft,
+  setDraftBody,
+  reshowDraft,
+} from "@/lib/email/process";
+import {
   sendMessage,
   answerCallbackQuery,
   editMessageText,
@@ -64,7 +72,8 @@ export async function POST(req: Request) {
     }
     if (!inboundText) return ok();
 
-    // If the user just tapped "Delegate", capture this reply as the name.
+    // Pending captures from a prior button tap.
+    if (await handlePendingEmailEdit(inboundText, chatId)) return ok();
     if (await handlePendingDelegate(inboundText, chatId)) return ok();
 
     const reply = await runAgent({
@@ -106,6 +115,29 @@ async function handlePendingDelegate(text: string, chatId: string): Promise<bool
     `Delegated to ${person}. I'll keep checking with you until it's fully done.`,
     { chatId },
   );
+  return true;
+}
+
+// Consume a pending email-draft edit, if any. Returns true if handled.
+async function handlePendingEmailEdit(text: string, chatId: string): Promise<boolean> {
+  const sb = supabaseAdmin();
+  const { data: pending } = await sb
+    .from("agent_events")
+    .select("id, payload")
+    .eq("user_id", USER_ID)
+    .eq("type", "pending_email_edit")
+    .is("processed_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const confId = pending?.payload?.confirmation_id as string | undefined;
+  if (!pending || !confId) return false;
+  await sb
+    .from("agent_events")
+    .update({ processed_at: new Date().toISOString() })
+    .eq("id", pending.id);
+  await setDraftBody(confId, text);
+  await reshowDraft(confId, chatId);
   return true;
 }
 
@@ -209,6 +241,50 @@ async function handleCallback(cb: any): Promise<void> {
       );
       await answerCallbackQuery(cbId, "I'll keep checking");
       if (chatId && msgId) await editMessageText(chatId, msgId, "⏳ Still pending — I'll check again tomorrow.");
+    } else {
+      await answerCallbackQuery(cbId);
+    }
+    return;
+  }
+
+  // Email summary actions: em:<emailId>:<task|draft>
+  if (data.startsWith("em:")) {
+    const [, emailId, action] = data.split(":");
+    if (emailId && action === "task") {
+      const summary = await createTaskFromEmail(emailId, ctx);
+      await answerCallbackQuery(cbId, "Task created");
+      if (chatId && msgId) await editMessageText(chatId, msgId, `📋 ${summary}`);
+    } else if (emailId && action === "draft") {
+      await answerCallbackQuery(cbId, "Drafting…");
+      await draftReply(emailId, chatId);
+    } else {
+      await answerCallbackQuery(cbId);
+    }
+    return;
+  }
+
+  // Email reply gate: er:<confirmationId>:<approve|edit|cancel>
+  if (data.startsWith("er:")) {
+    const [, confId, action] = data.split(":");
+    if (!confId) {
+      await answerCallbackQuery(cbId);
+      return;
+    }
+    if (action === "approve") {
+      const status = await sendApprovedReply(confId);
+      await answerCallbackQuery(cbId, "Approved");
+      if (chatId && msgId) await editMessageText(chatId, msgId, `✅ ${status}`);
+    } else if (action === "edit") {
+      await answerCallbackQuery(cbId);
+      const sb = supabaseAdmin();
+      await sb
+        .from("agent_events")
+        .insert({ user_id: USER_ID, type: "pending_email_edit", payload: { confirmation_id: confId } });
+      await sendMessage("Send me the edited reply text and I'll use it.", { chatId });
+    } else if (action === "cancel") {
+      await cancelDraft(confId);
+      await answerCallbackQuery(cbId, "Canceled");
+      if (chatId && msgId) await editMessageText(chatId, msgId, "✖ Canceled.");
     } else {
       await answerCallbackQuery(cbId);
     }

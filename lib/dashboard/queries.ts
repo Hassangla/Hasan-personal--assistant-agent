@@ -48,6 +48,7 @@ export type DashboardData = {
   };
   people: { id: string; name: string; summary: string | null; next_touch_at: string | null }[];
   plans: { id: string; horizon: string; title: string; status: string; next_review_at: string | null }[];
+  mail: { id: string; from: string; subject: string; summary: string | null; area: string | null; received_at: string | null }[];
 };
 
 function ymd(d: Date): string {
@@ -74,6 +75,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     recentExpRes,
     peopleRes,
     plansRes,
+    mailRes,
   ] = await Promise.all([
     sb
       .from("tasks")
@@ -155,6 +157,12 @@ export async function getDashboardData(): Promise<DashboardData> {
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(12),
+    sb
+      .from("emails")
+      .select("id, from_name, from_email, subject, summary, classification, received_at")
+      .eq("user_id", USER_ID)
+      .order("received_at", { ascending: false })
+      .limit(8),
   ]);
 
   // Latest reason per task from the audit log.
@@ -233,5 +241,13 @@ export async function getDashboardData(): Promise<DashboardData> {
     expenses: { totals, recent: (recentExpRes.data ?? []) as any },
     people,
     plans: (plansRes.data ?? []) as any,
+    mail: ((mailRes.data ?? []) as any[]).map((m) => ({
+      id: m.id,
+      from: m.from_name || m.from_email || "unknown",
+      subject: m.subject ?? "(no subject)",
+      summary: m.summary ?? null,
+      area: (m.classification as any)?.area ?? null,
+      received_at: m.received_at ?? null,
+    })),
   };
 }

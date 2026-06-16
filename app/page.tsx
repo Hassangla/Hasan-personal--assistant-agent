@@ -348,6 +348,34 @@ export default async function Dashboard() {
               <Empty>No plans yet — ask me to draft a short, medium, or long-term plan.</Empty>
             )}
           </Section>
+
+          {/* MAIL */}
+          <Section index="11" label="Mail" meta="agent inbox" className="lg:col-span-3">
+            {d.mail.length ? (
+              <ul className="space-y-2.5">
+                {d.mail.map((m) => (
+                  <li key={m.id} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 text-cool">✉</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate text-sm text-text">{m.subject}</span>
+                        {m.area && <Pill tone="muted">{m.area}</Pill>}
+                        <span className="shrink-0 font-mono text-[10px] text-faint">
+                          {fmtWhen(m.received_at)}
+                        </span>
+                      </div>
+                      <div className="truncate text-xs text-muted">
+                        {m.from}
+                        {m.summary ? ` — ${m.summary}` : ""}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Empty>No mail yet — CC your agent address to route email here.</Empty>
+            )}
+          </Section>
         </div>
 
         <footer className="mt-6 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.16em] text-faint">

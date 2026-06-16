@@ -13,11 +13,13 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
     "@supabase/supabase-js": "^2.58.0",
+    "agentmail": "^0.5.12",
     "next": "^15.5.7",
     "openai": "^6.16.0",
     "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "server-only": "^0.0.1",
-    "react-dom": "^19.2.0"
+    "svix": "^1.95.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
