@@ -28,28 +28,31 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center px-6">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-xl border border-border bg-panel/70 p-6"
+        className="w-full max-w-sm rounded-[20px] border border-line bg-card p-8 shadow-card"
       >
-        <div className="font-mono text-[10px] tracking-[0.22em] text-faint">
-          PERSONAL AGENT // ACCESS
+        <div className="mb-5 flex items-center gap-3">
+          <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-accent shadow-[0_3px_8px_-2px_rgba(199,95,63,0.5)]">
+            <span className="h-[9px] w-[9px] rounded-full bg-white" />
+          </span>
+          <span className="font-display text-[16px] font-bold tracking-[-0.01em] text-ink">Personal Agent</span>
         </div>
-        <h1 className="mt-2 font-serif text-2xl italic text-text">Sign in.</h1>
-        <p className="mt-1 text-sm text-muted">Single-operator console.</p>
+        <h1 className="m-0 font-display text-[28px] font-extrabold tracking-[-0.02em] text-ink">Sign in.</h1>
+        <p className="mt-1.5 text-[14px] text-ink2">Single-operator console.</p>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
           autoFocus
-          className="mt-5 w-full rounded-lg border border-border bg-panel2 px-3 py-2 text-text outline-none focus:border-accent/60"
+          className="mt-5 w-full rounded-[11px] border border-line bg-cardalt px-3.5 py-2.5 text-[15px] text-ink outline-none transition focus:border-accent"
         />
-        {error && <p className="mt-2 text-sm text-hot">{error}</p>}
+        {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
         <button
           type="submit"
           disabled={loading || !password}
-          className="mt-4 w-full rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-accent transition hover:bg-accent/20 disabled:opacity-40"
+          className="mt-4 w-full rounded-[11px] bg-accent px-3 py-2.5 text-[13px] font-bold text-white shadow-accent transition hover:brightness-105 disabled:opacity-50"
         >
-          {loading ? "checking…" : "enter"}
+          {loading ? "Checking…" : "Enter"}
         </button>
       </form>
     </main>
