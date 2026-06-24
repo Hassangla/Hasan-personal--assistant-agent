@@ -34,7 +34,12 @@ export type DashboardData = {
   today: DashTask[];
   followups: DashFollowup[];
   ledger: LedgerItem[];
-  areas: { id: string; name: string; checkin: string | null }[];
+  areas: {
+    id: string;
+    name: string;
+    checkin: string | null;
+    tasks: { id: string; title: string; due_at: string | null; status: string }[];
+  }[];
   habits: { name: string; streak: number; today: boolean }[];
   expenses: {
     totals: { currency: string; total: number }[];
@@ -76,6 +81,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     peopleRes,
     plansRes,
     mailRes,
+    areaTaskRes,
   ] = await Promise.all([
     sb
       .from("tasks")
@@ -163,6 +169,15 @@ export async function getDashboardData(): Promise<DashboardData> {
       .eq("user_id", USER_ID)
       .order("received_at", { ascending: false })
       .limit(8),
+    // Active tasks grouped under their life area.
+    sb
+      .from("tasks")
+      .select("id, title, due_at, status, area_id, priority_score")
+      .eq("user_id", USER_ID)
+      .in("status", ["open", "reminded", "escalated", "snoozed"])
+      .order("priority_score", { ascending: false })
+      .order("due_at", { ascending: true, nullsFirst: false })
+      .limit(80),
   ]);
 
   // Latest reason per task from the audit log.
@@ -189,10 +204,21 @@ export async function getDashboardData(): Promise<DashboardData> {
       checkinByArea.set(c.area_id, c.response);
     }
   }
+  const tasksByArea = new Map<
+    string,
+    { id: string; title: string; due_at: string | null; status: string }[]
+  >();
+  for (const t of (areaTaskRes.data ?? []) as any[]) {
+    if (!t.area_id) continue;
+    const arr = tasksByArea.get(t.area_id) ?? [];
+    arr.push({ id: t.id, title: t.title, due_at: t.due_at, status: t.status });
+    tasksByArea.set(t.area_id, arr);
+  }
   const areas = ((areaRes.data ?? []) as any[]).map((a) => ({
     id: a.id,
     name: a.name,
     checkin: checkinByArea.get(a.id) ?? null,
+    tasks: tasksByArea.get(a.id) ?? [],
   }));
 
   // Habit streaks (consecutive days with a positive log, ending today/yesterday).

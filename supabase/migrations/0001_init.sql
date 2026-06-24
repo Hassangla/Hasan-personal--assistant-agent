@@ -284,7 +284,7 @@ begin
       and next_nudge_at is not null
       and next_nudge_at <= now()
       and status in ('open','reminded','escalated')
-    order by next_nudge_at asc
+    order by priority_score desc, next_nudge_at asc
     limit p_limit
     for update skip locked
   loop
