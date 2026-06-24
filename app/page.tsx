@@ -1,6 +1,7 @@
 import { getDashboardData } from "@/lib/dashboard/queries";
-import { Section, Empty, Pill, Badge, Dot, type Tone } from "@/components/dashboard/ui";
+import { Section, Empty, Pill, Dot, type Tone } from "@/components/dashboard/ui";
 import { CaptureBar } from "@/components/dashboard/CaptureBar";
+import { CompletableTask } from "@/components/dashboard/CompletableTask";
 import { Clock } from "@/components/dashboard/Clock";
 import { USER_TIMEZONE } from "@/lib/config";
 
@@ -119,19 +120,15 @@ export default async function Dashboard() {
             {d.today.length ? (
               <ul className="divide-y divide-border/70">
                 {d.today.map((t, i) => (
-                  <li
+                  <CompletableTask
                     key={t.id}
-                    className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
-                  >
-                    <Badge>P{i + 1}</Badge>
-                    <span className="min-w-0 flex-1 truncate text-sm text-text">
-                      {t.title}
-                    </span>
-                    {t.urgency === "high" && <Pill tone="hot">urgent</Pill>}
-                    <span className="shrink-0 font-mono text-[11px] text-faint">
-                      {fmtWhen(t.due_at) || "—"}
-                    </span>
-                  </li>
+                    id={t.id}
+                    title={t.title}
+                    leadBadge={`P${i + 1}`}
+                    tags={t.urgency === "high" ? [{ tone: "hot", label: "urgent" }] : []}
+                    when={fmtWhen(t.due_at) || "—"}
+                    className="py-2.5 first:pt-0 last:pb-0"
+                  />
                 ))}
               </ul>
             ) : (
@@ -144,17 +141,13 @@ export default async function Dashboard() {
             {d.followups.length ? (
               <ul className="space-y-2.5">
                 {d.followups.map((t) => (
-                  <li key={t.id} className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-sm text-text">
-                      {t.title}
-                    </span>
-                    <Pill tone={t.status === "escalated" ? "hot" : "warm"}>
-                      {t.status}
-                    </Pill>
-                    <span className="shrink-0 font-mono text-[10px] text-faint">
-                      ×{t.nudge_count}
-                    </span>
-                  </li>
+                  <CompletableTask
+                    key={t.id}
+                    id={t.id}
+                    title={t.title}
+                    tags={[{ tone: t.status === "escalated" ? "hot" : "warm", label: t.status }]}
+                    counter={`×${t.nudge_count}`}
+                  />
                 ))}
               </ul>
             ) : (
@@ -229,14 +222,12 @@ export default async function Dashboard() {
                     {a.tasks.length ? (
                       <ul className="space-y-1.5">
                         {a.tasks.slice(0, 6).map((t) => (
-                          <li key={t.id} className="flex items-center justify-between gap-2 text-sm">
-                            <span className="min-w-0 flex-1 truncate text-text">{t.title}</span>
-                            {t.due_at && (
-                              <span className="shrink-0 font-mono text-[10px] text-faint">
-                                {fmtWhen(t.due_at)}
-                              </span>
-                            )}
-                          </li>
+                          <CompletableTask
+                            key={t.id}
+                            id={t.id}
+                            title={t.title}
+                            when={t.due_at ? fmtWhen(t.due_at) : undefined}
+                          />
                         ))}
                         {a.tasks.length > 6 && (
                           <li className="font-mono text-[10px] text-faint">
