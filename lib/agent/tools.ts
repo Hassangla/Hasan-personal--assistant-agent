@@ -5,6 +5,7 @@ import { sendMessage } from "@/lib/telegram/client";
 import { userToday } from "@/lib/config";
 import { sendTaskOptions } from "@/lib/telegram/keyboards";
 import { AREAS } from "@/lib/areas";
+import { toUtcIso } from "@/lib/time";
 
 // ---------------------------------------------------------------------------
 // Tool registry. Each tool declares a JSON schema, a `reversible` flag, and a
@@ -35,10 +36,9 @@ export type ToolDef = {
 
 // --- helpers ---------------------------------------------------------------
 
+// Timezone-aware: a naive datetime is read as USER_TIMEZONE, not server-UTC.
 function toIso(value?: string | null): string | null {
-  if (!value) return null;
-  const t = Date.parse(value);
-  return Number.isNaN(t) ? null : new Date(t).toISOString();
+  return toUtcIso(value);
 }
 
 async function findOrCreateEntity(
@@ -84,9 +84,11 @@ async function resolveAreaId(userId: string, name?: string): Promise<string | nu
   return findOrCreateEntity(userId, "area", match);
 }
 
-// Default a nudge to fire before the deadline (24h prior, but never in the past).
-function defaultNudge(dueIso: string | null): string | null {
-  if (!dueIso) return null;
+// When to first chase a task. With a deadline: 24h before (never in the past).
+// Without one: still enter the follow-up cycle ~1 day out, so undated tasks are
+// never silently ignored.
+function defaultNudge(dueIso: string | null): string {
+  if (!dueIso) return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   const due = new Date(dueIso).getTime();
   const dayBefore = due - 24 * 60 * 60 * 1000;
   const soon = Date.now() + 60 * 1000;

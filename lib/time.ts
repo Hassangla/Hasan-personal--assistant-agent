@@ -56,3 +56,40 @@ export function localHour(tz: string = USER_TIMEZONE, at: Date = new Date()): nu
     new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hourCycle: "h23" }).format(at),
   );
 }
+
+// Convert a wall-clock time (interpreted as if in `tz`) to a UTC instant.
+function wallTimeToUtc(
+  y: number,
+  mo: number,
+  d: number,
+  h: number,
+  mi: number,
+  s: number,
+  tz: string,
+): Date {
+  const guess = Date.UTC(y, mo - 1, d, h, mi, s);
+  let utc = guess - tzOffsetMs(new Date(guess), tz);
+  utc = guess - tzOffsetMs(new Date(utc), tz); // refine across a DST edge
+  return new Date(utc);
+}
+
+// Parse a user-supplied date/time to a UTC ISO string. A datetime WITHOUT an
+// explicit offset is interpreted in USER_TIMEZONE (NOT the server's UTC), and a
+// bare date is treated as end-of-day local. Strings with an offset/Z are kept.
+export function toUtcIso(value?: string | null, tz: string = USER_TIMEZONE): string | null {
+  if (!value) return null;
+  const v = value.trim();
+  const hasOffset = /([zZ]|[+-]\d{2}:?\d{2})$/.test(v);
+  if (!hasOffset) {
+    const dt = v.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/);
+    if (dt) {
+      return wallTimeToUtc(+dt[1]!, +dt[2]!, +dt[3]!, +dt[4]!, +dt[5]!, +(dt[6] ?? 0), tz).toISOString();
+    }
+    const dOnly = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dOnly) {
+      return wallTimeToUtc(+dOnly[1]!, +dOnly[2]!, +dOnly[3]!, 23, 59, 0, tz).toISOString();
+    }
+  }
+  const t = Date.parse(v);
+  return Number.isNaN(t) ? null : new Date(t).toISOString();
+}

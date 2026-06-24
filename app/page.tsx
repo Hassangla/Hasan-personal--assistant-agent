@@ -212,34 +212,44 @@ export default async function Dashboard() {
             )}
           </Section>
 
-          {/* FIVE AREAS */}
-          <Section
-            index="05"
-            label="Areas"
-            meta="today's check-in"
-            className="lg:col-span-2"
-          >
+          {/* AREAS — open tasks grouped by life area */}
+          <Section index="05" label="Areas" meta="open tasks by life area" className="lg:col-span-3">
             {d.areas.length ? (
-              <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {d.areas.map((a) => (
-                  <li
-                    key={a.id}
-                    className="flex items-start gap-2 rounded-lg border border-border bg-panel2/60 px-3 py-2.5"
-                  >
-                    <span className="mt-1">
-                      <Dot tone={a.checkin ? "good" : "muted"} />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+                  <div key={a.id} className="rounded-lg border border-border bg-panel2/50 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
                         {a.name}
-                      </div>
-                      <div className="truncate text-sm text-text">
-                        {a.checkin ?? <span className="text-faint">no check-in yet</span>}
-                      </div>
+                      </span>
+                      <span className="shrink-0 font-mono text-[10px] text-faint">
+                        {a.tasks.length}
+                      </span>
                     </div>
-                  </li>
+                    {a.tasks.length ? (
+                      <ul className="space-y-1.5">
+                        {a.tasks.slice(0, 6).map((t) => (
+                          <li key={t.id} className="flex items-center justify-between gap-2 text-sm">
+                            <span className="min-w-0 flex-1 truncate text-text">{t.title}</span>
+                            {t.due_at && (
+                              <span className="shrink-0 font-mono text-[10px] text-faint">
+                                {fmtWhen(t.due_at)}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                        {a.tasks.length > 6 && (
+                          <li className="font-mono text-[10px] text-faint">
+                            +{a.tasks.length - 6} more
+                          </li>
+                        )}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-faint">no open tasks</p>
+                    )}
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : (
               <Empty>No areas seeded.</Empty>
             )}
