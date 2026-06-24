@@ -1,23 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
 body {
-  background-color: #08090b;
-  color: #d9dee7;
+  background-color: #f4f1ea;
+  color: #221f1a;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Subtle command-center glow behind the canvas. */
-body {
-  background-image:
-    radial-gradient(900px 500px at 50% -8%, rgba(94, 234, 212, 0.05), transparent 60%),
-    radial-gradient(700px 420px at 100% 0%, rgba(92, 200, 245, 0.04), transparent 55%);
-  background-attachment: fixed;
+/* ONLINE heartbeat dot. */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+input::placeholder {
+  color: #a99f8c;
 }
 
 ::-webkit-scrollbar {
@@ -28,14 +40,14 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1a1e26;
+  background: #e3dbcc;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #272c37;
+  background: #d6ccb9;
 }
 
 ::selection {
-  background: rgba(94, 234, 212, 0.22);
-  color: #eafffb;
+  background: rgba(199, 95, 63, 0.18);
+  color: #3f2a20;
 }
