@@ -58,15 +58,15 @@ export function CompletableTask({
         disabled={busy || done}
         aria-label={done ? "Completed" : "Mark task done"}
         title={failed ? "Couldn't complete — click to retry" : done ? "Completed" : "Mark done"}
-        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] leading-none transition ${
+        className={`group flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border text-[10px] leading-none transition ${
           done
             ? "border-good bg-good/20 text-good"
             : failed
               ? "border-hot text-hot"
-              : "border-faint/60 text-transparent hover:border-good hover:text-good"
+              : "border-muted text-faint hover:border-good hover:bg-good/15 hover:text-good"
         }`}
       >
-        {busy ? "·" : "✓"}
+        {busy ? "·" : done || failed ? "✓" : <span className="opacity-0 transition group-hover:opacity-100">✓</span>}
       </button>
 
       {leadBadge && <Badge>{leadBadge}</Badge>}
