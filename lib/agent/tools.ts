@@ -851,6 +851,178 @@ export const TOOLS: ToolDef[] = [
     },
   },
 
+  // --- CALENDAR / MEETINGS (personal tracking — reversible) ----------------
+
+  {
+    name: "create_meeting",
+    description:
+      "Schedule a meeting/appointment/call on the user's calendar. Use for anything time-blocked. Resolve relative times to ISO WITH the offset. The agent reminds the user before it starts (default 30 min) and it appears on their synced Google/iOS calendar.",
+    reversible: true,
+    resourceType: "meeting",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        start: { type: "string", description: "ISO-8601 start with offset. Required." },
+        end: { type: "string", description: "ISO-8601 end. Optional; defaults to 1h after start." },
+        location: { type: "string" },
+        notes: { type: "string" },
+        area: { type: "string", description: "One of the seven life areas." },
+        person: { type: "string", description: "Who the meeting is with." },
+        remind_minutes_before: { type: "number", description: "Reminder lead time in minutes. Default 30." },
+      },
+      required: ["title", "start"],
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      const startIso = toIso(input.start);
+      if (!startIso) throw new Error("create_meeting: invalid 'start'");
+      const endIso = toIso(input.end) ?? new Date(new Date(startIso).getTime() + 3600000).toISOString();
+      const lead = Number.isFinite(input.remind_minutes_before)
+        ? Math.max(0, Math.round(input.remind_minutes_before))
+        : 30;
+      const remindAt = new Date(new Date(startIso).getTime() - lead * 60000).toISOString();
+      const areaId = await findOrCreateEntity(ctx.userId, "area", input.area);
+      const personId = await findOrCreateEntity(ctx.userId, "person", input.person);
+      const { data, error } = await sb
+        .from("meetings")
+        .insert({
+          user_id: ctx.userId,
+          title: input.title,
+          location: input.location ?? null,
+          notes: input.notes ?? null,
+          area_id: areaId,
+          person_id: personId,
+          starts_at: startIso,
+          ends_at: endIso,
+          remind_minutes_before: lead,
+          next_reminder_at: remindAt,
+        })
+        .select("id, title, starts_at, ends_at, next_reminder_at")
+        .single();
+      if (error) throw new Error(`create_meeting: ${error.message}`);
+      return data;
+    },
+  },
+
+  {
+    name: "list_meetings",
+    description: "List the user's meetings — upcoming by default, or recent past ones.",
+    reversible: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        when: { type: "string", enum: ["upcoming", "past", "all"], description: "Default upcoming." },
+        limit: { type: "number" },
+      },
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      const limit = Math.min(50, Number(input.limit) || 20);
+      const nowIso = new Date().toISOString();
+      let q = sb
+        .from("meetings")
+        .select("id, title, starts_at, ends_at, location, status")
+        .eq("user_id", ctx.userId)
+        .neq("status", "cancelled");
+      if (input.when === "past") q = q.lt("starts_at", nowIso).order("starts_at", { ascending: false });
+      else if (input.when === "all") q = q.order("starts_at", { ascending: true });
+      else q = q.gte("starts_at", nowIso).order("starts_at", { ascending: true });
+      const { data, error } = await q.limit(limit);
+      if (error) throw new Error(`list_meetings: ${error.message}`);
+      return { meetings: data ?? [] };
+    },
+  },
+
+  {
+    name: "update_meeting",
+    description:
+      "Reschedule or edit a meeting (time, title, location, notes, reminder lead, area, person). Rescheduling re-arms the reminder.",
+    reversible: true,
+    resourceType: "meeting",
+    input_schema: {
+      type: "object",
+      properties: {
+        meeting_id: { type: "string" },
+        title: { type: "string" },
+        start: { type: "string" },
+        end: { type: "string" },
+        location: { type: "string" },
+        notes: { type: "string" },
+        area: { type: "string" },
+        person: { type: "string" },
+        remind_minutes_before: { type: "number" },
+      },
+      required: ["meeting_id"],
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      const { data: prev } = await sb
+        .from("meetings")
+        .select("starts_at, remind_minutes_before")
+        .eq("id", input.meeting_id)
+        .eq("user_id", ctx.userId)
+        .maybeSingle();
+      const patch: Record<string, unknown> = {};
+      if (input.title !== undefined) patch.title = input.title;
+      if (input.location !== undefined) patch.location = input.location;
+      if (input.notes !== undefined) patch.notes = input.notes;
+      if (input.area !== undefined) patch.area_id = await findOrCreateEntity(ctx.userId, "area", input.area);
+      if (input.person !== undefined) patch.person_id = await findOrCreateEntity(ctx.userId, "person", input.person);
+      if (input.start !== undefined) {
+        const s = toIso(input.start);
+        if (s) patch.starts_at = s;
+      }
+      if (input.end !== undefined) patch.ends_at = toIso(input.end);
+      const leadGiven = Number.isFinite(input.remind_minutes_before);
+      const effLead = leadGiven
+        ? Math.max(0, Math.round(input.remind_minutes_before))
+        : (prev?.remind_minutes_before ?? 30);
+      if (leadGiven) patch.remind_minutes_before = effLead;
+      const effStart = (patch.starts_at as string | undefined) ?? prev?.starts_at;
+      if ((patch.starts_at || leadGiven) && effStart) {
+        patch.next_reminder_at = new Date(new Date(effStart).getTime() - effLead * 60000).toISOString();
+        patch.reminded = false; // re-arm so the rescheduled meeting reminds again
+      }
+      const { data, error } = await sb
+        .from("meetings")
+        .update(patch)
+        .eq("id", input.meeting_id)
+        .eq("user_id", ctx.userId)
+        .select("id, title, starts_at, ends_at, next_reminder_at")
+        .single();
+      if (error) throw new Error(`update_meeting: ${error.message}`);
+      return { ...data, _undo: { meeting_id: input.meeting_id, before: prev } };
+    },
+  },
+
+  {
+    name: "cancel_meeting",
+    description: "Cancel a meeting. Stops its reminder and removes it from the synced calendar.",
+    reversible: true,
+    resourceType: "meeting",
+    input_schema: {
+      type: "object",
+      properties: {
+        meeting_id: { type: "string" },
+        reason: { type: "string" },
+      },
+      required: ["meeting_id"],
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      const { data, error } = await sb
+        .from("meetings")
+        .update({ status: "cancelled", next_reminder_at: null })
+        .eq("id", input.meeting_id)
+        .eq("user_id", ctx.userId)
+        .select("id, title, status")
+        .single();
+      if (error) throw new Error(`cancel_meeting: ${error.message}`);
+      return data;
+    },
+  },
+
   // --- IRREVERSIBLE — routed through the confirmation gate -----------------
 
   {

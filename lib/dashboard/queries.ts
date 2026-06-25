@@ -2,6 +2,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { USER_ID, USER_TIMEZONE } from "@/lib/config";
 import { AREA_META, areaMeta } from "@/lib/areas";
+import { calendarFeedPath } from "@/lib/calendar";
 
 // All reads for the dashboard. Pure data — NEVER calls the model. Run from a
 // server component so the service-role client stays server-side.
@@ -42,6 +43,7 @@ export type InboxItem = {
 };
 export type PersonRow = { id: string; name: string; role: string; area: string | null };
 export type PlanCol = { horizon: string; window: string; items: string[] };
+export type MeetingRow = { id: string; title: string; startIso: string; startText: string; area: string | null };
 
 export type DashboardData = {
   metrics: { openPriorities: number; chasingYou: number; chasingOthers: number; awaitingOK: number };
@@ -54,6 +56,8 @@ export type DashboardData = {
   inbox: InboxItem[];
   people: PersonRow[];
   plans: PlanCol[];
+  meetings: MeetingRow[];
+  calendarFeedPath: string;
   pendingCount: number;
 };
 
@@ -80,6 +84,17 @@ function tzParts(iso: string): { date: string; time: string } {
     hour12: false,
   }).format(d);
   return { date, time };
+}
+function fmtMeeting(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: USER_TIMEZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso));
 }
 function todayStr(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -125,7 +140,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const sb = supabaseAdmin();
   const OPEN = ["open", "reminded", "escalated", "snoozed"];
 
-  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes] = await Promise.all([
+  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes, meetingRes] = await Promise.all([
     sb.from("entities").select("id,name").eq("user_id", USER_ID).eq("kind", "area"),
     sb
       .from("tasks")
@@ -162,6 +177,14 @@ export async function getDashboardData(): Promise<DashboardData> {
       .select("id", { count: "exact", head: true })
       .eq("user_id", USER_ID)
       .eq("status", "pending"),
+    sb
+      .from("meetings")
+      .select("id,title,starts_at,area_id")
+      .eq("user_id", USER_ID)
+      .eq("status", "scheduled")
+      .gte("starts_at", new Date().toISOString())
+      .order("starts_at", { ascending: true })
+      .limit(6),
   ]);
 
   const areaById = new Map<string, string>();
@@ -308,6 +331,14 @@ export async function getDashboardData(): Promise<DashboardData> {
     { time: "21:00", label: "Evening schedule check", detail: "Tomorrow's plan", color: "#B7AE9D" },
   ];
 
+  const meetings: MeetingRow[] = ((meetingRes.data ?? []) as any[]).map((m) => ({
+    id: m.id,
+    title: m.title,
+    startIso: m.starts_at,
+    startText: fmtMeeting(m.starts_at),
+    area: areaNameOf(m.area_id),
+  }));
+
   const briefing = composeBriefing({ today, metrics, areas, chasingOthers });
 
   return {
@@ -321,6 +352,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     inbox,
     people,
     plans,
+    meetings,
+    calendarFeedPath: calendarFeedPath(),
     pendingCount: metrics.awaitingOK,
   };
 }

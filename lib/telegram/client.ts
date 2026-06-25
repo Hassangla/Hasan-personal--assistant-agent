@@ -35,11 +35,12 @@ async function tgCall(
 // that would break Telegram's Markdown parser and 400 the whole message.
 export async function sendMessage(
   text: string,
-  opts?: { chatId?: string; buttons?: InlineKeyboard },
+  opts?: { chatId?: string; buttons?: InlineKeyboard; parseMode?: "HTML" | "MarkdownV2" },
 ): Promise<{ messageId?: number }> {
   const json = await tgCall("sendMessage", {
     chat_id: opts?.chatId ?? defaultChatId(),
     text: text.slice(0, 4096),
+    ...(opts?.parseMode ? { parse_mode: opts.parseMode } : {}),
     ...(opts?.buttons
       ? { reply_markup: { inline_keyboard: opts.buttons } }
       : {}),

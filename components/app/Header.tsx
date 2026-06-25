@@ -10,7 +10,7 @@ export function Header({
   tz,
   width = "wide",
 }: {
-  active?: "dashboard" | "people" | "approvals";
+  active?: "dashboard" | "people" | "approvals" | "archive";
   pendingCount?: number;
   tz: string;
   width?: "wide" | "narrow";
@@ -20,6 +20,7 @@ export function Header({
     { key: "dashboard", label: "Dashboard", href: "/" },
     { key: "people", label: "People", href: "/people" },
     { key: "approvals", label: "Approvals", href: "/approvals" },
+    { key: "archive", label: "Archive", href: "/archive" },
   ];
 
   return (

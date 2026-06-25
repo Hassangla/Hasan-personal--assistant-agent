@@ -4,7 +4,9 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { runAgent } from "@/lib/agent/core";
 import { runFollowupTransition, type TaskRow } from "@/lib/agent/followup";
 import { sendMessage } from "@/lib/telegram/client";
-import { nextLocalTimeUtc } from "@/lib/time";
+import { formatMeetingReminder } from "@/lib/telegram/format";
+import { areaMeta } from "@/lib/areas";
+import { nextLocalTimeUtc, inQuietHours } from "@/lib/time";
 import type { Complexity } from "@/lib/llm/models";
 
 export const runtime = "nodejs";
@@ -20,13 +22,19 @@ async function handle(req: Request) {
 
   const sb = supabaseAdmin();
   const userId = USER_ID;
-  const report = { followups: 0, relationships: 0, jobs: 0, expired_confirmations: 0 };
+  const report = { followups: 0, meetings: 0, relationships: 0, jobs: 0, expired_confirmations: 0 };
 
   // Expire stale pending confirmations so old approvals can't fire (pitfall #5).
   const { data: expired } = await sb.rpc("expire_stale_confirmations", {
     p_user_id: userId,
   });
   report.expired_confirmations = typeof expired === "number" ? expired : 0;
+
+  // QUIET HOURS — no proactive reminders overnight; everything due is held and
+  // delivered once the local clock passes QUIET_HOURS_END (default 07:00).
+  if (inQuietHours()) {
+    return NextResponse.json({ ok: true, quiet: true, ...report });
+  }
 
   // 1. DUE FOLLOW-UPS — claim-then-act under a row lock.
   const { data: tasks, error: tErr } = await sb.rpc("claim_due_tasks", {
@@ -40,6 +48,41 @@ async function handle(req: Request) {
       report.followups++;
     } catch (err) {
       console.error("[tick] followup failed:", err);
+    }
+  }
+
+  // 1b. MEETING REMINDERS — claim due, not-yet-sent reminders for upcoming
+  // meetings (set reminded=true atomically so we never double-send).
+  const nowIso = new Date().toISOString();
+  const { data: dueMeetings } = await sb
+    .from("meetings")
+    .update({ reminded: true })
+    .eq("user_id", userId)
+    .eq("status", "scheduled")
+    .eq("reminded", false)
+    .lte("next_reminder_at", nowIso)
+    .gt("starts_at", nowIso)
+    .select("id, title, starts_at, ends_at, location, area_id, person_id");
+  for (const m of (dueMeetings ?? []) as any[]) {
+    try {
+      const areaName = m.area_id
+        ? (await sb.from("entities").select("name").eq("id", m.area_id).maybeSingle()).data?.name ?? null
+        : null;
+      const personName = m.person_id
+        ? (await sb.from("entities").select("name").eq("id", m.person_id).maybeSingle()).data?.name ?? null
+        : null;
+      const text = formatMeetingReminder({
+        title: m.title,
+        startIso: m.starts_at,
+        endIso: m.ends_at,
+        location: m.location,
+        area: areaName ? areaMeta(areaName).label : null,
+        person: personName,
+      });
+      await sendMessage(text, { parseMode: "HTML" });
+      report.meetings++;
+    } catch (err) {
+      console.error("[tick] meeting reminder failed:", err);
     }
   }
 

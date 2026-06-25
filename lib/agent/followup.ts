@@ -7,6 +7,8 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { buildSystemPrompt } from "@/lib/agent/systemPrompt";
 import { sendMessage } from "@/lib/telegram/client";
 import { followupKeyboard } from "@/lib/telegram/keyboards";
+import { formatTaskReminder } from "@/lib/telegram/format";
+import { areaMeta } from "@/lib/areas";
 
 // The follow-up state machine. Driven by the tick when a task's next_nudge_at
 // falls due (the claim_due_tasks RPC has locked the row and pushed it out, so
@@ -26,7 +28,16 @@ export type TaskRow = {
   nudge_count: number | null;
   escalation_level: number | null;
   delegated_to: string | null;
+  area_id: string | null;
 };
+
+// Short label for the area, for the reminder header.
+async function resolveAreaLabel(areaId: string | null): Promise<string | null> {
+  if (!areaId) return null;
+  const { data } = await supabaseAdmin().from("entities").select("name").eq("id", areaId).maybeSingle();
+  const name = (data?.name as string) ?? null;
+  return name ? areaMeta(name).label : null;
+}
 
 const STOP_AFTER_ESCALATIONS = 5;
 const HOURS = 60 * 60 * 1000;
@@ -55,17 +66,17 @@ function formatDue(due: string | null): string {
 
 type Tone = "gentle" | "firm" | "strong" | "delegated";
 
+// Body line only — the structured header already shows the title/due/area.
 function fallbackNudge(task: TaskRow, tone: Tone): string {
-  const due = task.due_at ? ` (due ${formatDue(task.due_at)})` : "";
   switch (tone) {
     case "delegated":
-      return `Checking in: has ${task.delegated_to ?? "they"} finished "${task.title}"${due} yet?`;
+      return `Has ${task.delegated_to ?? "they"} finished it yet?`;
     case "gentle":
-      return `Reminder: "${task.title}"${due}. Did you get to it? If not, what's the plan?`;
+      return `Did you get to it? If not, what's the plan?`;
     case "firm":
-      return `Still open: "${task.title}"${due}. Done, or should we postpone — what's blocking?`;
+      return `Done, or should we postpone — what's blocking?`;
     case "strong":
-      return `"${task.title}" has been open a while (nudge #${(task.nudge_count ?? 0) + 1}). Is it done, postponed, or should I drop it — and what's the reason?`;
+      return `Is it done, postponed, or should I drop it? What's the reason?`;
   }
 }
 
@@ -84,7 +95,8 @@ async function composeNudge(task: TaskRow, tone: Tone): Promise<string> {
           : "This has been ignored repeatedly. Nudge strongly. Two short lines max.";
     prompt = `A tracked task is overdue for follow-up: "${task.title}".${due} Nudge count so far: ${task.nudge_count ?? 0}. ${toneInstruction} Ask plainly whether it's done; if not, ask the reason and whether to postpone (and to when).`;
   }
-  prompt += " Match the user's language. Write ONLY the message body — no preamble.";
+  prompt +=
+    " Match the user's language. The task title and time are already shown above your line — do NOT repeat them. Write ONLY the short nudge/question (one line), no preamble.";
 
   try {
     const resp = await anthropic().messages.create({
@@ -174,6 +186,19 @@ export async function runFollowupTransition(task: TaskRow): Promise<void> {
     return;
   }
 
-  const text = await composeNudge(task, t.tone);
-  await sendMessage(text, { buttons: followupKeyboard(task.id, Boolean(task.delegated_to)) });
+  const body = await composeNudge(task, t.tone);
+  const areaLabel = await resolveAreaLabel(task.area_id);
+  const text = formatTaskReminder({
+    title: task.title,
+    area: areaLabel,
+    dueIso: task.due_at,
+    nudgeCount: (task.nudge_count ?? 0) + 1,
+    tone: t.tone,
+    body,
+    delegatedTo: task.delegated_to,
+  });
+  await sendMessage(text, {
+    parseMode: "HTML",
+    buttons: followupKeyboard(task.id, Boolean(task.delegated_to)),
+  });
 }
