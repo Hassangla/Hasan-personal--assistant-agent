@@ -9,6 +9,7 @@ const PUBLIC_PREFIXES = [
   "/api/telegram", // verifies Telegram secret + user id
   "/api/email", // verifies its own push token (Part 4)
   "/api/agent/tick", // verifies CRON_SECRET
+  "/api/calendar", // .ics subscription feed — the URL token is the credential
 ];
 
 export async function middleware(req: NextRequest) {

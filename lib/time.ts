@@ -57,6 +57,28 @@ export function localHour(tz: string = USER_TIMEZONE, at: Date = new Date()): nu
   );
 }
 
+// Quiet hours: no proactive Telegram reminders inside this local-time window.
+// Defaults to 00:00–07:00; override with QUIET_HOURS_START / QUIET_HOURS_END.
+function quietBounds(): { start: number; end: number } {
+  const start = Number(process.env.QUIET_HOURS_START ?? 0);
+  const end = Number(process.env.QUIET_HOURS_END ?? 7);
+  return { start, end };
+}
+
+export function inQuietHours(tz: string = USER_TIMEZONE, at: Date = new Date()): boolean {
+  const { start, end } = quietBounds();
+  if (start === end) return false;
+  const h = localHour(tz, at);
+  // Handle a window that wraps past midnight (e.g. 22 → 7).
+  return start < end ? h >= start && h < end : h >= start || h < end;
+}
+
+// The next UTC instant at which quiet hours end (the local QUIET_HOURS_END).
+export function quietHoursEndUtc(tz: string = USER_TIMEZONE, from: Date = new Date()): Date {
+  const { end } = quietBounds();
+  return nextLocalTimeUtc(end, 0, tz, from);
+}
+
 // Convert a wall-clock time (interpreted as if in `tz`) to a UTC instant.
 function wallTimeToUtc(
   y: number,
