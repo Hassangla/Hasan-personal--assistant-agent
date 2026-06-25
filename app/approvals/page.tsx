@@ -12,13 +12,13 @@ export default async function ApprovalsPage() {
     <div className="min-h-screen pb-[72px]">
       <Header active="approvals" pendingCount={d.pendingCount} tz={USER_TIMEZONE} width="narrow" />
 
-      <div className="mx-auto max-w-[980px] px-8">
+      <div className="mx-auto max-w-[980px] px-4 sm:px-8">
         {/* TITLE */}
         <div className="mt-[30px]">
           <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
             Nothing happens without your OK
           </div>
-          <h1 className="m-0 font-display text-[38px] font-extrabold leading-none tracking-[-0.025em] text-ink">
+          <h1 className="m-0 font-display text-[28px] font-extrabold leading-none tracking-[-0.025em] text-ink sm:text-[38px]">
             Approvals
           </h1>
         </div>
@@ -33,7 +33,7 @@ export default async function ApprovalsPage() {
         </div>
 
         {/* PENDING */}
-        <div className="mb-3.5 mt-[30px] flex items-baseline gap-3">
+        <div className="mb-3.5 mt-[30px] flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">01</span>
           <h2 className="m-0 font-display text-[21px] font-bold tracking-[-0.01em] text-ink">Waiting on you</h2>
           <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink3">{d.pendingCount} pending</span>
@@ -55,15 +55,15 @@ export default async function ApprovalsPage() {
         {/* RESOLVED LOG */}
         {d.log.length > 0 && (
           <>
-            <div className="mb-3.5 mt-9 flex items-baseline gap-3">
+            <div className="mb-3.5 mt-9 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">02</span>
               <h2 className="m-0 font-display text-[21px] font-bold tracking-[-0.01em] text-ink">Resolved today</h2>
             </div>
-            <div className="rounded-[16px] border border-line bg-card px-[22px] py-2">
+            <div className="rounded-[16px] border border-line bg-card px-5 py-2 sm:px-[22px]">
               {d.log.map((l) => (
                 <div key={l.id} className="flex items-center gap-3.5 border-t border-line2 py-[13px] first:border-t-0">
                   <span style={{ background: l.color }} className="h-2 w-2 shrink-0 rounded-full" />
-                  <span className="flex-1 text-[14px] text-[#4F483D]">{l.title}</span>
+                  <span className="min-w-0 flex-1 truncate text-[14px] text-[#4F483D]">{l.title}</span>
                   <span
                     style={{ color: l.color }}
                     className="font-mono text-[10px] font-semibold uppercase tracking-[0.04em]"

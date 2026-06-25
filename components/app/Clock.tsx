@@ -36,13 +36,13 @@ export function Clock({ tz, mode }: { tz: string; mode: "header" | "hero" }) {
   }
 
   return (
-    <div className="text-right">
+    <div className="text-left sm:text-right">
       <div
-        className="font-display text-[46px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-ink"
+        className="font-display text-[34px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-ink sm:text-[46px]"
         suppressHydrationWarning
       >
         {time}
-        <span className="align-super text-[18px] font-semibold text-[#C0B7A5]"> {sec}</span>
+        <span className="align-super text-[14px] font-semibold text-[#C0B7A5] sm:text-[18px]"> {sec}</span>
       </div>
       <div className="mt-2 font-mono text-[10px] tracking-[0.12em] text-ink3">{tzLabel}</div>
     </div>
