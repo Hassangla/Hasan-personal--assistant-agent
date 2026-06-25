@@ -96,7 +96,7 @@ export function CompletableTaskRow({
       <div className="-mx-2.5 flex items-center gap-[13px] rounded-[10px] border-t border-line2 px-2.5 py-[13px] hover:bg-cardalt">
         {circle}
         {badge && <span className="w-5 shrink-0 font-mono text-[11px] font-semibold text-inkfaint">{badge}</span>}
-        <span className="flex-1 text-[15px] font-medium" style={titleStyle}>
+        <span className="min-w-0 flex-1 truncate text-[15px] font-medium" style={titleStyle}>
           {title}
         </span>
         {layout === "today" && m && (
@@ -128,7 +128,7 @@ export function CompletableTaskRow({
     return (
       <div className="flex items-center gap-[11px] border-t border-line2 py-[11px]">
         {circle}
-        <span className="flex-1 text-[14px] font-medium" style={titleStyle}>
+        <span className="min-w-0 flex-1 truncate text-[14px] font-medium" style={titleStyle}>
           {title}
         </span>
         {m && (
@@ -154,11 +154,11 @@ export function CompletableTaskRow({
   return (
     <div className="flex items-center gap-[11px] border-t border-line2 py-[11px]">
       {circle}
-      <div className="flex-1">
-        <div className="text-[14px] font-medium" style={titleStyle}>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[14px] font-medium" style={titleStyle}>
           {title}
         </div>
-        <div className="mt-px text-[11px] text-ink3">
+        <div className="truncate text-[11px] text-ink3">
           with {who} · {m?.label ?? area}
         </div>
       </div>

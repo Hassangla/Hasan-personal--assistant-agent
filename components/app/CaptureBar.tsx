@@ -43,7 +43,7 @@ export function CaptureBar() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Tell me anything — a task, a thought, an expense…"
-          className="min-w-[240px] flex-1 border-none bg-transparent py-1.5 text-[16px] text-ink outline-none"
+          className="min-w-0 flex-1 basis-full border-none bg-transparent py-1.5 text-[16px] text-ink outline-none sm:basis-auto"
         />
         <span className="inline-flex items-center gap-2 rounded-[11px] border border-[#E2DAC9] bg-card px-3.5 py-[9px] text-[13px] font-semibold text-ink2">
           <span className="h-[7px] w-[7px] rounded-full bg-good" />

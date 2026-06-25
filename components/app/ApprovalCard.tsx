@@ -37,7 +37,7 @@ export function ApprovalCard({ a }: { a: Approval }) {
 
   return (
     <div
-      className="rounded-[16px] border border-line bg-card p-6 shadow-soft"
+      className="rounded-[16px] border border-line bg-card p-5 shadow-soft sm:p-6"
       style={{ borderLeft: `4px solid ${a.typeColor}` }}
     >
       <div className="mb-2.5 flex flex-wrap items-center gap-2.5">
@@ -63,7 +63,7 @@ export function ApprovalCard({ a }: { a: Approval }) {
         </div>
       )}
 
-      <div className="mt-4 flex items-center gap-2.5">
+      <div className="mt-4 flex flex-wrap items-center gap-2.5 gap-y-2">
         <button
           onClick={() => resolve("approve")}
           disabled={!!busy}

@@ -11,7 +11,7 @@ export default async function PeoplePage() {
   return (
     <div className="min-h-screen pb-[72px]">
       <Header active="people" pendingCount={pendingCount} tz={USER_TIMEZONE} />
-      <div className="mx-auto max-w-[1180px] px-8">
+      <div className="mx-auto max-w-[1180px] px-4 sm:px-8">
         <PeopleBrowser contacts={contacts} />
       </div>
     </div>

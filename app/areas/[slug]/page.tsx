@@ -18,7 +18,7 @@ export default async function AreaPage({ params }: { params: Promise<{ slug: str
     <div className="min-h-screen pb-[72px]">
       <Header pendingCount={d.pendingCount} tz={USER_TIMEZONE} width="narrow" />
 
-      <div className="mx-auto max-w-[980px] px-8">
+      <div className="mx-auto max-w-[980px] px-4 sm:px-8">
         {/* BREADCRUMB */}
         <div className="mt-6 font-mono text-[11px] tracking-[0.06em] text-inkfaint">
           <Link href="/" className="text-inkfaint no-underline hover:text-ink2">
@@ -29,10 +29,10 @@ export default async function AreaPage({ params }: { params: Promise<{ slug: str
         </div>
 
         {/* HERO */}
-        <div className="mt-4 rounded-[20px] border p-[30px]" style={{ background: c + "0e", borderColor: c + "33" }}>
+        <div className="mt-4 rounded-[20px] border p-5 sm:p-[30px]" style={{ background: c + "0e", borderColor: c + "33" }}>
           <div className="flex items-center gap-[13px]">
-            <span style={{ background: c }} className="h-3.5 w-3.5 rounded-full" />
-            <h1 className="m-0 font-display text-[38px] font-extrabold leading-none tracking-[-0.025em]" style={{ color: c }}>
+            <span style={{ background: c }} className="h-3.5 w-3.5 shrink-0 rounded-full" />
+            <h1 className="m-0 font-display text-[28px] font-extrabold leading-none tracking-[-0.025em] sm:text-[38px]" style={{ color: c }}>
               {d.meta.label}
             </h1>
           </div>
@@ -51,7 +51,7 @@ export default async function AreaPage({ params }: { params: Promise<{ slug: str
         </div>
 
         {/* TASKS */}
-        <Card className="mt-6 px-7 pb-4 pt-6">
+        <Card className="mt-6 px-5 pb-4 pt-6 sm:px-7">
           <SectionHeader index="01" title="Tasks" size={20} meta="click the circle to complete" />
           <div className="mt-1.5">
             {d.tasks.length ? (
@@ -74,7 +74,7 @@ export default async function AreaPage({ params }: { params: Promise<{ slug: str
 
         {/* PLANS + PEOPLE */}
         <div className="mt-6 grid grid-cols-1 items-start gap-6 sm:grid-cols-2">
-          <Card className="px-[26px] pb-4 pt-6">
+          <Card className="px-5 pb-4 pt-6 sm:px-[26px]">
             <SectionHeader index="02" title="Plans" size={20} />
             <div className="mt-1">
               {d.plans.length ? (
@@ -95,7 +95,7 @@ export default async function AreaPage({ params }: { params: Promise<{ slug: str
             </div>
           </Card>
 
-          <Card className="px-[26px] pb-4 pt-6">
+          <Card className="px-5 pb-4 pt-6 sm:px-[26px]">
             <SectionHeader index="03" title="People" size={20} />
             <div className="mt-1">
               {d.people.length ? (
@@ -121,7 +121,7 @@ export default async function AreaPage({ params }: { params: Promise<{ slug: str
 
         {/* INBOX */}
         {d.emails.length > 0 && (
-          <Card className="mt-6 px-7 pb-[18px] pt-6">
+          <Card className="mt-6 px-5 pb-[18px] pt-6 sm:px-7">
             <SectionHeader index="04" title="Inbox" size={20} />
             <div className="mt-1">
               {d.emails.map((e) => (

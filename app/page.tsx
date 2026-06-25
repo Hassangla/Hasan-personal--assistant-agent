@@ -31,19 +31,21 @@ export default async function Dashboard() {
     <div className="min-h-screen pb-[72px]">
       <Header active="dashboard" pendingCount={d.pendingCount} tz={USER_TIMEZONE} />
 
-      <div className="mx-auto max-w-[1180px] px-8">
+      <div className="mx-auto max-w-[1180px] px-4 sm:px-8">
         {/* BRIEFING HERO */}
         <div
-          className="mt-[30px] rounded-[22px] border border-[#EFE2D8] p-[36px] shadow-hero"
+          className="mt-5 rounded-[22px] border border-[#EFE2D8] p-6 shadow-hero sm:mt-[30px] sm:p-[36px]"
           style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#FFF7F1 55%,#FCF0F4 100%)" }}
         >
-          <div className="flex flex-wrap items-start justify-between gap-8">
-            <div className="min-w-[420px] flex-1">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+            <div className="min-w-0 flex-1">
               <Eyebrow className="mb-3.5">01 — Morning briefing · sent 06:00</Eyebrow>
-              <h1 className="m-0 mb-4 font-display text-[42px] font-extrabold leading-[1.02] tracking-[-0.025em] text-ink">
+              <h1 className="m-0 mb-4 font-display text-[32px] font-extrabold leading-[1.05] tracking-[-0.025em] text-ink sm:text-[42px] sm:leading-[1.02]">
                 {d.briefing.greeting}
               </h1>
-              <p className="m-0 max-w-[660px] text-[17px] leading-[1.62] text-[#5B5346]">{d.briefing.text}</p>
+              <p className="m-0 max-w-[660px] text-[15px] leading-[1.6] text-[#5B5346] sm:text-[17px] sm:leading-[1.62]">
+                {d.briefing.text}
+              </p>
               {d.briefing.focus.length > 0 && (
                 <div className="mt-[22px] flex flex-wrap items-center gap-2.5">
                   <span className="mr-0.5 font-mono text-[11px] uppercase tracking-[0.08em] text-inkfaint">
@@ -61,7 +63,7 @@ export default async function Dashboard() {
                 </div>
               )}
             </div>
-            <div className="min-w-[170px]">
+            <div className="min-w-0 sm:min-w-[170px]">
               <Clock tz={USER_TIMEZONE} mode="hero" />
             </div>
           </div>
@@ -98,7 +100,7 @@ export default async function Dashboard() {
         {/* MAIN GRID */}
         <div className="mt-[34px] grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.55fr_1fr]">
           {/* TODAY */}
-          <Card className="px-7 pb-3.5 pt-6">
+          <Card className="px-5 pb-3.5 pt-6 sm:px-7">
             <SectionHeader index="02" title="Today" meta={`${d.today.length} priorities`} />
             <div className="mt-1.5">
               {d.today.length ? (
@@ -122,7 +124,7 @@ export default async function Dashboard() {
           {/* RIGHT COLUMN */}
           <div className="flex flex-col gap-6">
             {/* LIFE AREAS */}
-            <Card className="px-6 pb-3.5 pt-6">
+            <Card className="px-5 pb-3.5 pt-6 sm:px-6">
               <SectionHeader index="03" title="Life areas" meta="7" />
               <div className="mt-3 grid grid-cols-2 gap-2.5">
                 {d.areas.map((a) => (
@@ -159,7 +161,7 @@ export default async function Dashboard() {
             </Card>
 
             {/* HEARTBEAT */}
-            <Card className="px-6 pb-[18px] pt-6">
+            <Card className="px-5 pb-[18px] pt-6 sm:px-6">
               <SectionHeader index="04" title="Heartbeat" meta="per-minute" />
               <div className="mt-3.5">
                 {d.heartbeat.map((h, i) => (
@@ -184,13 +186,13 @@ export default async function Dashboard() {
 
         {/* FOLLOWING UP */}
         <div className="mt-9">
-          <div className="mb-4 flex items-baseline gap-3">
+          <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">05</span>
             <h2 className="m-0 font-display text-[21px] font-bold tracking-[-0.01em] text-ink">Following up</h2>
-            <span className="text-[13px] text-ink3">— the engine that nudges until things resolve</span>
+            <span className="hidden text-[13px] text-ink3 sm:inline">— the engine that nudges until things resolve</span>
           </div>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card className="px-[26px] pb-3.5 pt-[22px]">
+            <Card className="px-5 pb-3.5 pt-[22px] sm:px-[26px]">
               <div className="mb-2 flex items-center gap-[9px]">
                 <span className="h-2 w-2 rounded-full bg-amber" />
                 <h3 className="m-0 text-[14px] font-bold text-inkstrong">I'm chasing you</h3>
@@ -212,7 +214,7 @@ export default async function Dashboard() {
               )}
             </Card>
 
-            <Card className="px-[26px] pb-3.5 pt-[22px]">
+            <Card className="px-5 pb-3.5 pt-[22px] sm:px-[26px]">
               <div className="mb-2 flex items-center gap-[9px]">
                 <span className="h-2 w-2 rounded-full bg-blue" />
                 <h3 className="m-0 text-[14px] font-bold text-inkstrong">I'm chasing others</h3>
@@ -242,7 +244,7 @@ export default async function Dashboard() {
 
         {/* INBOX + PEOPLE */}
         <div className="mt-9 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
-          <Card className="px-7 py-6">
+          <Card className="px-5 py-6 sm:px-7">
             <SectionHeader index="06" title="Inbox" note="— triaged, awaiting your OK" />
             <div className="my-3.5 flex items-center gap-[7px] rounded-[8px] bg-[#E9F3EC] px-[11px] py-[7px] text-[12px] text-good">
               <span className="h-1.5 w-1.5 rounded-full bg-good" />
@@ -274,7 +276,7 @@ export default async function Dashboard() {
             )}
           </Card>
 
-          <Card className="px-[26px] pb-4 pt-6">
+          <Card className="px-5 pb-4 pt-6 sm:px-[26px]">
             <SectionHeader index="07" title="People" />
             <div className="mb-1.5 mt-1 text-[12px] text-ink3">Profiles I build quietly from your emails & chats.</div>
             {d.people.length ? (
@@ -302,14 +304,14 @@ export default async function Dashboard() {
 
         {/* PLANS */}
         <div className="mt-9">
-          <div className="mb-4 flex items-baseline gap-3">
+          <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">08</span>
             <h2 className="m-0 font-display text-[21px] font-bold tracking-[-0.01em] text-ink">Plans</h2>
-            <span className="text-[13px] text-ink3">— reviewed on a rhythm</span>
+            <span className="hidden text-[13px] text-ink3 sm:inline">— reviewed on a rhythm</span>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {d.plans.map((pl) => (
-              <Card key={pl.horizon} className="rounded-[18px] px-[22px] py-5">
+              <Card key={pl.horizon} className="rounded-[18px] px-5 py-5 sm:px-[22px]">
                 <Eyebrow className="mb-1">{pl.horizon}</Eyebrow>
                 <div className="mb-3 text-[13px] text-ink3">{pl.window}</div>
                 {pl.items.length ? (

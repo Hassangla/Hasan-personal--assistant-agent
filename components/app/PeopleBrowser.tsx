@@ -34,13 +34,15 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
           <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
             CRM · built quietly from your inbox
           </div>
-          <h1 className="m-0 font-display text-[38px] font-extrabold leading-none tracking-[-0.025em] text-ink">People</h1>
+          <h1 className="m-0 font-display text-[28px] font-extrabold leading-none tracking-[-0.025em] text-ink sm:text-[38px]">
+            People
+          </h1>
           <p className="m-0 mt-3 max-w-[560px] text-[15px] text-ink2">
             Profiles I assemble from your emails, calls and chats — role, organization, history, and the open items tying
             you together. Nothing here was entered by hand.
           </p>
         </div>
-        <div className="flex min-w-[240px] items-center gap-2 rounded-[12px] border border-[#E7E0D2] bg-card px-3.5 py-2.5">
+        <div className="flex w-full items-center gap-2 rounded-[12px] border border-[#E7E0D2] bg-card px-3.5 py-2.5 sm:w-auto sm:min-w-[240px]">
           <span className="font-mono text-[14px] text-inkfaint">⌕</span>
           <input
             value={q}
@@ -122,15 +124,15 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
 
         {/* DETAIL */}
         {selected ? (
-          <div className="rounded-[20px] border border-line bg-card p-8 shadow-card">
-            <div className="flex items-start gap-[18px]">
+          <div className="rounded-[20px] border border-line bg-card p-5 shadow-card sm:p-8">
+            <div className="flex flex-wrap items-start gap-[18px] gap-y-4">
               <span
                 style={{ background: areaMeta(selected.area).color + "1f", color: areaMeta(selected.area).color }}
                 className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-[16px] font-display text-[21px] font-extrabold"
               >
                 {initialsOf(selected.name)}
               </span>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <h2 className="m-0 font-display text-[25px] font-extrabold tracking-[-0.02em] text-ink">
                   {selected.name}
                 </h2>
@@ -148,11 +150,11 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
                   </span>
                 )}
               </div>
-              <div className="flex flex-col gap-2">
-                <button className="rounded-[10px] bg-accent px-4 py-[9px] text-[13px] font-bold text-white shadow-accent transition hover:brightness-105">
+              <div className="flex w-full gap-2 sm:w-auto sm:flex-col">
+                <button className="flex-1 rounded-[10px] bg-accent px-4 py-[9px] text-[13px] font-bold text-white shadow-accent transition hover:brightness-105 sm:flex-none">
                   Draft a message
                 </button>
-                <button className="rounded-[10px] border border-[#E2DAC9] bg-card px-4 py-[9px] text-[13px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32]">
+                <button className="flex-1 rounded-[10px] border border-[#E2DAC9] bg-card px-4 py-[9px] text-[13px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32] sm:flex-none">
                   Add a task
                 </button>
               </div>

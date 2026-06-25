@@ -71,13 +71,13 @@ export function SectionHeader({
   size?: number;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <div className="flex items-baseline gap-3">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <div className="flex min-w-0 items-baseline gap-3">
         <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">{index}</span>
         <h2 className="m-0 font-display font-bold tracking-[-0.01em] text-ink" style={{ fontSize: size }}>
           {title}
         </h2>
-        {note && <span className="text-[13px] text-ink3">{note}</span>}
+        {note && <span className="hidden text-[13px] text-ink3 sm:inline">{note}</span>}
       </div>
       {meta != null && (
         <span className="shrink-0 font-mono text-[11px] uppercase tracking-[0.08em] text-ink3">{meta}</span>
