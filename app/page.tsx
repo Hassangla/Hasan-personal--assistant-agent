@@ -3,7 +3,8 @@ import { USER_TIMEZONE } from "@/lib/config";
 import { Header } from "@/components/app/Header";
 import { Clock } from "@/components/app/Clock";
 import { CaptureBar } from "@/components/app/CaptureBar";
-import { CompletableTaskRow } from "@/components/app/CompletableTaskRow";
+import { TaskItem } from "@/components/app/TaskItem";
+import { AddTask } from "@/components/app/AddTask";
 import { Card, SectionHeader, Eyebrow, AreaTag, Avatar } from "@/components/app/ui";
 import Link from "next/link";
 
@@ -21,9 +22,9 @@ const METRIC_STYLE = [
 export default async function Dashboard() {
   const d = await getDashboardData();
   const metrics = [
-    { label: "Open priorities", value: d.metrics.openPriorities },
-    { label: "I'm chasing you", value: d.metrics.chasingYou },
-    { label: "Chasing others", value: d.metrics.chasingOthers },
+    { label: "To-Do", value: d.metrics.openPriorities },
+    { label: "Being nudged", value: d.metrics.chasingYou },
+    { label: "I'm chasing", value: d.metrics.chasingOthers },
     { label: "Awaiting your OK", value: d.metrics.awaitingOK },
   ];
 
@@ -100,24 +101,25 @@ export default async function Dashboard() {
         {/* MAIN GRID */}
         <div className="mt-[34px] grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.55fr_1fr]">
           {/* TODAY */}
-          <Card className="px-5 pb-3.5 pt-6 sm:px-7">
-            <SectionHeader index="02" title="Today" meta={`${d.today.length} priorities`} />
+          <Card className="px-5 pb-4 pt-6 sm:px-7">
+            <SectionHeader index="02" title="To-Do" note="— your tasks" meta={`${d.today.length}`} />
             <div className="mt-1.5">
               {d.today.length ? (
                 d.today.map((t) => (
-                  <CompletableTaskRow
+                  <TaskItem
                     key={t.id}
                     id={t.id}
                     title={t.title}
-                    layout="today"
+                    variant="todo"
                     badge={t.priority}
                     area={t.area}
                     state={{ color: t.state.color, label: t.state.label }}
                   />
                 ))
               ) : (
-                <p className="py-6 text-center text-[14px] text-ink3">No open priorities — capture something above.</p>
+                <p className="py-6 text-center text-[14px] text-ink3">All clear — add a task below or capture one above.</p>
               )}
+              <AddTask variant="todo" />
             </div>
           </Card>
 
@@ -184,62 +186,28 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        {/* FOLLOWING UP */}
+        {/* I'M CHASING (delegated) */}
         <div className="mt-9">
           <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">05</span>
-            <h2 className="m-0 font-display text-[21px] font-bold tracking-[-0.01em] text-ink">Following up</h2>
-            <span className="hidden text-[13px] text-ink3 sm:inline">— the engine that nudges until things resolve</span>
+            <h2 className="m-0 font-display text-[21px] font-bold tracking-[-0.01em] text-ink">I'm Chasing</h2>
+            <span className="hidden text-[13px] text-ink3 sm:inline">— delegated work; I chase them until you confirm it's done</span>
           </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card className="px-5 pb-3.5 pt-[22px] sm:px-[26px]">
-              <div className="mb-2 flex items-center gap-[9px]">
-                <span className="h-2 w-2 rounded-full bg-amber" />
-                <h3 className="m-0 text-[14px] font-bold text-inkstrong">I'm chasing you</h3>
-              </div>
-              {d.chasingYou.length ? (
-                d.chasingYou.map((c) => (
-                  <CompletableTaskRow
-                    key={c.id}
-                    id={c.id}
-                    title={c.title}
-                    layout="chaseYou"
-                    area={c.area}
-                    note={c.note}
-                    noteColor={c.noteColor}
-                  />
-                ))
-              ) : (
-                <p className="py-3 text-[13px] text-ink3">Nothing waiting on you.</p>
-              )}
-            </Card>
-
-            <Card className="px-5 pb-3.5 pt-[22px] sm:px-[26px]">
-              <div className="mb-2 flex items-center gap-[9px]">
-                <span className="h-2 w-2 rounded-full bg-blue" />
-                <h3 className="m-0 text-[14px] font-bold text-inkstrong">I'm chasing others</h3>
-                <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.06em] text-inkfaint">
-                  delegated
-                </span>
-              </div>
-              {d.chasingOthers.length ? (
-                d.chasingOthers.map((c) => (
-                  <CompletableTaskRow
-                    key={c.id}
-                    id={c.id}
-                    title={c.title}
-                    layout="chaseOthers"
-                    area={c.area}
-                    who={c.who}
-                    note={c.note}
-                    noteColor={c.noteColor}
-                  />
-                ))
-              ) : (
-                <p className="py-3 text-[13px] text-ink3">Nothing delegated right now.</p>
-              )}
-            </Card>
-          </div>
+          <Card className="px-5 pb-4 pt-[22px] sm:px-[26px]">
+            <div className="mb-1 flex items-center gap-[9px]">
+              <span className="h-2 w-2 rounded-full bg-blue" />
+              <h3 className="m-0 text-[14px] font-bold text-inkstrong">Waiting on others</h3>
+              <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.06em] text-inkfaint">delegated</span>
+            </div>
+            {d.chasingOthers.length ? (
+              d.chasingOthers.map((c) => (
+                <TaskItem key={c.id} id={c.id} title={c.title} variant="delegated" area={c.area} who={c.who} />
+              ))
+            ) : (
+              <p className="py-3 text-[13px] text-ink3">Nothing delegated — add one below, or tap → on a To-Do task.</p>
+            )}
+            <AddTask variant="delegated" />
+          </Card>
         </div>
 
         {/* INBOX + PEOPLE */}
