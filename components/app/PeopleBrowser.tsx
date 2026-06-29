@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AREA_META, areaMeta } from "@/lib/areas";
 import { initialsOf } from "@/components/app/ui";
 import type { PeopleContact } from "@/lib/dashboard/people";
@@ -23,6 +24,44 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
   }, [contacts, area, q]);
 
   const selected = visible.find((c) => c.id === selId) ?? visible[0] ?? null;
+
+  const router = useRouter();
+  const [delegating, setDelegating] = useState(false);
+  const [dTitle, setDTitle] = useState("");
+  const [dEmail, setDEmail] = useState("");
+  const [dBusy, setDBusy] = useState(false);
+  const [dMsg, setDMsg] = useState<string | null>(null);
+
+  async function delegate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dTitle.trim() || !selected || dBusy) return;
+    setDBusy(true);
+    setDMsg(null);
+    try {
+      const res = await fetch("/api/people/delegate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: dTitle, name: selected.name, email: dEmail || selected.email }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setDMsg(
+          j.emailQueued
+            ? "Delegated — and the email is queued for your approval (Approvals)."
+            : "Delegated. Add an email to also send them a note.",
+        );
+        setDTitle("");
+        setDelegating(false);
+        router.refresh();
+      } else {
+        setDMsg(j.error ?? "Couldn't delegate.");
+      }
+    } catch {
+      setDMsg("Network error.");
+    } finally {
+      setDBusy(false);
+    }
+  }
 
   const chips = [{ canonical: "All", label: "All", color: "#7A7264" }, ...AREA_META];
 
@@ -151,14 +190,52 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
                 )}
               </div>
               <div className="flex w-full gap-2 sm:w-auto sm:flex-col">
-                <button className="flex-1 rounded-[10px] bg-accent px-4 py-[9px] text-[13px] font-bold text-white shadow-accent transition hover:brightness-105 sm:flex-none">
-                  Draft a message
-                </button>
-                <button className="flex-1 rounded-[10px] border border-[#E2DAC9] bg-card px-4 py-[9px] text-[13px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32] sm:flex-none">
-                  Add a task
+                <button
+                  onClick={() => {
+                    setDelegating((v) => !v);
+                    setDEmail(selected.email);
+                    setDMsg(null);
+                  }}
+                  className="flex-1 rounded-[10px] bg-accent px-4 py-[9px] text-[13px] font-bold text-white shadow-accent transition hover:brightness-105 sm:flex-none"
+                >
+                  Delegate a task
                 </button>
               </div>
             </div>
+
+            {delegating && (
+              <form onSubmit={delegate} className="mt-3 rounded-[12px] border border-line2 bg-cardalt p-3">
+                <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">
+                  Delegate to {selected.name}
+                </div>
+                <input
+                  value={dTitle}
+                  onChange={(e) => setDTitle(e.target.value)}
+                  autoFocus
+                  placeholder="What should they do?"
+                  className="mb-1.5 w-full rounded-[8px] border border-line bg-card px-3 py-1.5 text-[13px] text-ink outline-none"
+                />
+                <input
+                  value={dEmail}
+                  onChange={(e) => setDEmail(e.target.value)}
+                  placeholder="their email (to send the request)"
+                  className="mb-2 w-full rounded-[8px] border border-line bg-card px-3 py-1.5 text-[13px] text-ink outline-none"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    disabled={dBusy || !dTitle.trim()}
+                    className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+                  >
+                    {dBusy ? "Delegating…" : "Delegate & email"}
+                  </button>
+                  <button type="button" onClick={() => setDelegating(false)} className="text-[12px] text-ink3">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+            {dMsg && <p className="mt-2 text-[12px] text-ink2">{dMsg}</p>}
 
             {/* what I know */}
             <div className="mt-6 rounded-[14px] border border-[#F0EADD] bg-cardalt px-[18px] py-4">
