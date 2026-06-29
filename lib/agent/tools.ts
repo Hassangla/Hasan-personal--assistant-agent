@@ -6,6 +6,7 @@ import { userToday } from "@/lib/config";
 import { sendTaskOptions } from "@/lib/telegram/keyboards";
 import { AREAS } from "@/lib/areas";
 import { toUtcIso } from "@/lib/time";
+import { addCalendarSource } from "@/lib/calendar/import";
 
 // ---------------------------------------------------------------------------
 // Tool registry. Each tool declares a JSON schema, a `reversible` flag, and a
@@ -1020,6 +1021,76 @@ export const TOOLS: ToolDef[] = [
         .single();
       if (error) throw new Error(`cancel_meeting: ${error.message}`);
       return data;
+    },
+  },
+
+  {
+    name: "import_calendar",
+    description:
+      "Subscribe to one of the user's OTHER calendars (Apple/iCloud or Google) by its published .ics or webcal URL and import its events into their agent calendar. Use when the user gives a calendar link to sync IN (e.g. 'import my apple calendar <url>'). One-way: their calendar → the agent.",
+    reversible: true,
+    resourceType: "calendar_source",
+    input_schema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "The .ics or webcal:// subscription URL." },
+        label: { type: "string", description: "A short name, e.g. 'iCloud' or 'Google'." },
+      },
+      required: ["url"],
+    },
+    handler: async (input, ctx) => {
+      const { id, imported } = await addCalendarSource(ctx.userId, input.url, input.label);
+      return {
+        id,
+        imported,
+        message: `Imported ${imported} event(s); this calendar will keep syncing automatically.`,
+      };
+    },
+  },
+
+  {
+    name: "list_calendar_imports",
+    description: "List the external calendars currently being imported into the agent calendar.",
+    reversible: true,
+    input_schema: { type: "object", properties: {} },
+    handler: async (_input, ctx) => {
+      const sb = supabaseAdmin();
+      const { data } = await sb
+        .from("calendar_sources")
+        .select("id,url,label,last_synced_at,last_status")
+        .eq("user_id", ctx.userId)
+        .eq("active", true)
+        .order("created_at", { ascending: true });
+      return { sources: data ?? [] };
+    },
+  },
+
+  {
+    name: "remove_calendar_import",
+    description:
+      "Stop importing an external calendar (by id or URL) and remove the events it brought in.",
+    reversible: true,
+    resourceType: "calendar_source",
+    input_schema: {
+      type: "object",
+      properties: { id: { type: "string" }, url: { type: "string" } },
+    },
+    handler: async (input, ctx) => {
+      const sb = supabaseAdmin();
+      let q = sb.from("calendar_sources").select("id").eq("user_id", ctx.userId);
+      if (input.id) q = q.eq("id", input.id);
+      else if (input.url) q = q.eq("url", String(input.url).trim());
+      else throw new Error("remove_calendar_import: id or url required");
+      const { data: src } = await q.maybeSingle();
+      if (!src) return { removed: false, message: "No matching calendar import found." };
+      await sb.from("calendar_sources").update({ active: false }).eq("id", src.id);
+      const { data: del } = await sb
+        .from("meetings")
+        .delete()
+        .eq("user_id", ctx.userId)
+        .like("external_uid", `${src.id}:%`)
+        .select("id");
+      return { removed: true, deleted_events: del?.length ?? 0 };
     },
   },
 

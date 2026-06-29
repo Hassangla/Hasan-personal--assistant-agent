@@ -6,6 +6,7 @@ import { runFollowupTransition, type TaskRow } from "@/lib/agent/followup";
 import { sendMessage } from "@/lib/telegram/client";
 import { formatMeetingReminder } from "@/lib/telegram/format";
 import { areaMeta } from "@/lib/areas";
+import { importDueSources } from "@/lib/calendar/import";
 import { nextLocalTimeUtc, inQuietHours } from "@/lib/time";
 import type { Complexity } from "@/lib/llm/models";
 
@@ -22,13 +23,22 @@ async function handle(req: Request) {
 
   const sb = supabaseAdmin();
   const userId = USER_ID;
-  const report = { followups: 0, meetings: 0, relationships: 0, jobs: 0, expired_confirmations: 0 };
+  const report = { followups: 0, meetings: 0, imported_meetings: 0, relationships: 0, jobs: 0, expired_confirmations: 0 };
 
   // Expire stale pending confirmations so old approvals can't fire (pitfall #5).
   const { data: expired } = await sb.rpc("expire_stale_confirmations", {
     p_user_id: userId,
   });
   report.expired_confirmations = typeof expired === "number" ? expired : 0;
+
+  // IMPORTED CALENDARS — pull external (Apple/Google) feeds in. Runs even during
+  // quiet hours: it never sends Telegram, it only refreshes the calendar.
+  try {
+    const imp = await importDueSources(userId);
+    report.imported_meetings = imp.imported;
+  } catch (e) {
+    console.error("[tick] calendar import failed:", e);
+  }
 
   // QUIET HOURS — no proactive reminders overnight; everything due is held and
   // delivered once the local clock passes QUIET_HOURS_END (default 07:00).
