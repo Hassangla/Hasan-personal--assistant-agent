@@ -7,6 +7,7 @@ import { sendMessage } from "@/lib/telegram/client";
 import { formatMeetingReminder } from "@/lib/telegram/format";
 import { areaMeta } from "@/lib/areas";
 import { importDueSources } from "@/lib/calendar/import";
+import { syncCaldavAccounts } from "@/lib/calendar/caldav";
 import { nextLocalTimeUtc, inQuietHours } from "@/lib/time";
 import type { Complexity } from "@/lib/llm/models";
 
@@ -38,6 +39,12 @@ async function handle(req: Request) {
     report.imported_meetings = imp.imported;
   } catch (e) {
     console.error("[tick] calendar import failed:", e);
+  }
+  try {
+    const cd = await syncCaldavAccounts(userId);
+    report.imported_meetings += cd.imported;
+  } catch (e) {
+    console.error("[tick] caldav sync failed:", e);
   }
 
   // QUIET HOURS — no proactive reminders overnight; everything due is held and

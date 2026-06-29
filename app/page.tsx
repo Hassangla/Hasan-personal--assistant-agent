@@ -210,7 +210,12 @@ export default async function Dashboard() {
                 </p>
               )}
             </div>
-            <CalendarSync httpsUrl={calHttps} webcalUrl={calWebcal} />
+            <CalendarSync
+              httpsUrl={calHttps}
+              webcalUrl={calWebcal}
+              caldavConnected={d.caldavConnected}
+              caldavUsername={d.caldavUsername}
+            />
           </Card>
         </div>
 
