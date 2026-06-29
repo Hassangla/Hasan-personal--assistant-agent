@@ -91,7 +91,9 @@ export async function discover(server: string, user: string, pass: string): Prom
     "0",
     `<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:current-user-principal/></d:prop></d:propfind>`,
   );
-  if (p1.status === 401) throw new Error("iCloud rejected the Apple ID or app-specific password.");
+  if (p1.status === 401 || p1.status === 403) {
+    throw new Error("iCloud rejected the Apple ID or app-specific password — double-check both (the password looks like xxxx-xxxx-xxxx-xxxx).");
+  }
   if (p1.status >= 400) throw new Error(`CalDAV discovery failed (HTTP ${p1.status}).`);
   const principalHref = extractHrefs(p1.text).find((h) => /principal/i.test(h)) ?? extractHrefs(p1.text)[0];
   if (!principalHref) throw new Error("Couldn't locate the CalDAV principal.");
