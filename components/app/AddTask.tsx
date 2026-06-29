@@ -1,0 +1,92 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { AREA_META } from "@/lib/areas";
+
+// Manually add a task to a section without the chat. The agent still applies
+// the same follow-up arming, reminders, and tracking (it routes through
+// create_task). For the Delegated section it asks who it's delegated to.
+export function AddTask({ variant }: { variant: "todo" | "delegated" }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [area, setArea] = useState("");
+  const [who, setWho] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(false);
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || busy) return;
+    setBusy(true);
+    setErr(false);
+    try {
+      const res = await fetch("/api/tasks/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title,
+          area: area || undefined,
+          delegate_to: variant === "delegated" ? who || undefined : undefined,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setTitle("");
+      setWho("");
+      setArea("");
+      setOpen(false);
+      router.refresh();
+    } catch {
+      setErr(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="mt-2 flex items-center gap-1.5 rounded-[8px] px-1 py-1 text-[12.5px] font-semibold text-ink3 transition hover:text-accent"
+      >
+        <span className="text-[14px] leading-none text-accent">+</span> Add task
+      </button>
+    );
+  }
+
+  const inputCls = "rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12.5px] text-ink outline-none";
+  return (
+    <form onSubmit={add} className="mt-2 flex flex-wrap items-center gap-1.5">
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder={variant === "delegated" ? "Delegated task…" : "New task…"}
+        autoFocus
+        className={`min-w-0 flex-1 basis-full ${inputCls} sm:basis-auto`}
+      />
+      <select value={area} onChange={(e) => setArea(e.target.value)} className={inputCls}>
+        <option value="">Area…</option>
+        {AREA_META.map((a) => (
+          <option key={a.slug} value={a.canonical}>
+            {a.label}
+          </option>
+        ))}
+      </select>
+      {variant === "delegated" && (
+        <input value={who} onChange={(e) => setWho(e.target.value)} placeholder="to whom" className={inputCls} />
+      )}
+      <button
+        type="submit"
+        disabled={busy || !title.trim()}
+        className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-white shadow-accent transition hover:brightness-105 disabled:opacity-50"
+      >
+        {busy ? "Adding…" : "Add"}
+      </button>
+      <button type="button" onClick={() => setOpen(false)} className="px-1.5 py-1 text-[12px] text-ink3" title="Cancel">
+        ✕
+      </button>
+      {err && <span className="basis-full text-[11px] text-danger">Couldn’t add that — try again.</span>}
+    </form>
+  );
+}

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { USER_ID } from "@/lib/config";
+import { USER_ID, USER_TIMEZONE, userToday } from "@/lib/config";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { runAgent } from "@/lib/agent/core";
 import { runFollowupTransition, type TaskRow } from "@/lib/agent/followup";
@@ -8,7 +8,7 @@ import { formatMeetingReminder } from "@/lib/telegram/format";
 import { areaMeta } from "@/lib/areas";
 import { importDueSources } from "@/lib/calendar/import";
 import { syncCaldavAccounts } from "@/lib/calendar/caldav";
-import { nextLocalTimeUtc, inQuietHours } from "@/lib/time";
+import { nextLocalTimeUtc, inQuietHours, toUtcIso } from "@/lib/time";
 import type { Complexity } from "@/lib/llm/models";
 
 export const runtime = "nodejs";
@@ -155,19 +155,65 @@ type ScheduledJob = {
 // + clarify area-less tasks + ask about schedule).
 async function buildMorningHint(): Promise<string> {
   const sb = supabaseAdmin();
-  const { data: tasks } = await sb
-    .from("tasks")
-    .select("title, due_at, area_id, urgency")
-    .eq("user_id", USER_ID)
-    .in("status", ["open", "reminded", "escalated", "snoozed"])
-    .order("priority_score", { ascending: false })
-    .limit(15);
-  const rows = (tasks ?? []) as any[];
+  const today = userToday();
+  const endToday = toUtcIso(`${today}T23:59:00`) ?? new Date(Date.now() + 18 * 3600000).toISOString();
+  const [taskRes, areaRes, meetRes] = await Promise.all([
+    sb
+      .from("tasks")
+      .select("title, due_at, area_id, urgency, status, nudge_count, delegated_to")
+      .eq("user_id", USER_ID)
+      .in("status", ["open", "reminded", "escalated", "snoozed"])
+      .order("priority_score", { ascending: false })
+      .limit(25),
+    sb.from("entities").select("id,name").eq("user_id", USER_ID).eq("kind", "area"),
+    sb
+      .from("meetings")
+      .select("title, starts_at, location")
+      .eq("user_id", USER_ID)
+      .eq("status", "scheduled")
+      .gte("starts_at", new Date().toISOString())
+      .lte("starts_at", endToday)
+      .order("starts_at", { ascending: true })
+      .limit(10),
+  ]);
+
+  const areaById = new Map<string, string>();
+  for (const a of (areaRes.data ?? []) as any[]) areaById.set(a.id, a.name);
+  const tzDate = (iso: string) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: USER_TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
+  const tzTime = (iso: string) =>
+    new Intl.DateTimeFormat("en-GB", { timeZone: USER_TIMEZONE, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
+
+  const rows = (taskRes.data ?? []) as any[];
   const lines = rows
-    .map((t) => `- ${t.title}${t.due_at ? ` (due ${t.due_at} UTC)` : ""}${t.area_id ? "" : " [no area]"}`)
+    .map((t) => {
+      const flags: string[] = [];
+      if (t.due_at) {
+        const d = tzDate(t.due_at);
+        if (d < today) flags.push("OVERDUE");
+        else if (d === today) flags.push("DUE TODAY");
+      }
+      if (t.urgency === "high") flags.push("urgent");
+      if (t.status === "reminded" || t.status === "escalated") flags.push(`nudged ×${t.nudge_count ?? 1}`);
+      if (t.delegated_to) flags.push(`delegated to ${t.delegated_to}`);
+      const area = t.area_id ? areaById.get(t.area_id) ?? "—" : "no area";
+      return `- ${flags.length ? `[${flags.join(", ")}] ` : ""}${t.title} — ${area}`;
+    })
+    .join("\n");
+  const meetings = ((meetRes.data ?? []) as any[])
+    .map((m) => `- ${tzTime(m.starts_at)} ${m.title}${m.location ? ` @ ${m.location}` : ""}`)
     .join("\n");
   const ambiguous = rows.filter((t) => !t.area_id).map((t) => t.title);
-  return `Morning brief (present all times in the user's timezone). Today's open tasks:\n${lines || "(none)"}\n\nSend one short message: their day at a glance, your suggested top 2–3 priorities (brief why), and ask about their schedule today. ${ambiguous.length ? `Also ask them to clarify the area for: ${ambiguous.join("; ")}.` : ""}`.trim();
+
+  return [
+    `MORNING BRIEF. Compose a clear, scannable daily summary (present all times in the user's timezone). This is the daily digest — a short STRUCTURED message with line breaks is expected, not a single sentence.`,
+    `Open tasks (already in priority order, with flags):\n${lines || "(none)"}`,
+    meetings ? `Today's meetings:\n${meetings}` : `No meetings scheduled today.`,
+    `Write the brief in this shape, keeping every line short:\n• One opening line naming the single most important thing to do first.\n• "⏰ Due / overdue" — the dated or overdue items.\n• "🔴 Urgent" — anything urgent (omit if none).\n• "🗓 Meetings" — today's meetings with times (omit if none).\n• A one-line by-area tally (e.g. "World Bank 4 · SJD 1 · Personal 2").\nEnd by asking what they want to tackle first.`,
+    ambiguous.length ? `Also ask them to set an area for: ${ambiguous.join("; ")}.` : ``,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 async function buildHourlyHint(): Promise<string | null> {
