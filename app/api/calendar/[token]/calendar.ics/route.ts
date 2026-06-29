@@ -48,6 +48,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     .from("meetings")
     .select("id, title, location, notes, starts_at, ends_at, remind_minutes_before, status, updated_at")
     .eq("user_id", USER_ID)
+    .eq("external_source", "agent") // only export agent-created events (don't echo imported ones back)
     .in("status", ["scheduled", "done"])
     .gte("starts_at", since)
     .order("starts_at", { ascending: true })
