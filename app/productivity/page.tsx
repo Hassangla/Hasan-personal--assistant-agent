@@ -1,7 +1,9 @@
 import { getProductivityData } from "@/lib/dashboard/productivity";
+import { getDuplicates } from "@/lib/dashboard/duplicates";
 import { USER_TIMEZONE } from "@/lib/config";
 import { Header } from "@/components/app/Header";
 import { Card, SectionHeader } from "@/components/app/ui";
+import { DuplicatesPanel } from "@/components/app/DuplicatesPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,7 @@ function Stat({ value, label, sub, color }: { value: string | number; label: str
 }
 
 export default async function ProductivityPage() {
-  const d = await getProductivityData();
+  const [d, dups] = await Promise.all([getProductivityData(), getDuplicates()]);
 
   return (
     <div className="min-h-screen pb-[72px]">
@@ -110,6 +112,8 @@ export default async function ProductivityPage() {
             )}
           </div>
         </Card>
+
+        <DuplicatesPanel data={dups} />
       </div>
     </div>
   );

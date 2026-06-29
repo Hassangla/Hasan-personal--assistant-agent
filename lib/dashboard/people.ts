@@ -9,6 +9,7 @@ export type PeopleContact = {
   name: string;
   role: string;
   org: string;
+  email: string;
   area: string | null;
   last: string;
   summary: string;
@@ -145,6 +146,7 @@ export async function getPeopleData(): Promise<{ contacts: PeopleContact[]; pend
       name: p.name,
       role,
       org,
+      email: (md.email as string) || "",
       area,
       last: relTime(lastIso),
       summary,
