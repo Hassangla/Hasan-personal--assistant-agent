@@ -3,20 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-// The calendar-linking hub:
+type CaldavAccount = { id: string; username: string; lastStatus: string | null };
+
+// Calendar-linking hub:
 //  • OUT     — subscribe Google/iOS to the agent's read-only .ics feed.
-//  • IN      — paste a published .ics URL → the agent imports its events.
-//  • iCloud  — connect directly via CalDAV (app-specific password), no link needed.
+//  • IN      — paste any published .ics URL (Google secret iCal, Outlook, etc.).
+//  • CalDAV  — connect one or MORE accounts directly (iCloud/Fastmail/Yahoo/custom).
 export function CalendarSync({
   httpsUrl,
   webcalUrl,
-  caldavConnected,
-  caldavUsername,
+  caldavAccounts,
 }: {
   httpsUrl: string;
   webcalUrl: string;
-  caldavConnected: boolean;
-  caldavUsername: string | null;
+  caldavAccounts: CaldavAccount[];
 }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -26,9 +26,11 @@ export function CalendarSync({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // iCloud — CalDAV
-  const [appleId, setAppleId] = useState("");
+  // CalDAV connect
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [provider, setProvider] = useState("icloud");
+  const [server, setServer] = useState("");
   const [cbusy, setCbusy] = useState(false);
   const [cmsg, setCmsg] = useState<string | null>(null);
 
@@ -70,18 +72,19 @@ export function CalendarSync({
 
   async function connect(e: React.FormEvent) {
     e.preventDefault();
-    if (!appleId.trim() || !password.trim() || cbusy) return;
+    if (!username.trim() || !password.trim() || cbusy) return;
     setCbusy(true);
     setCmsg(null);
     try {
       const res = await fetch("/api/caldav/connect", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ appleId, password }),
+        body: JSON.stringify({ username, password, provider, server }),
       });
       const j = await res.json().catch(() => ({}));
       if (res.ok) {
         setCmsg(`Connected · ${j.calendars} calendar(s) · imported ${j.imported} event(s).`);
+        setUsername("");
         setPassword("");
         router.refresh();
       } else {
@@ -94,7 +97,7 @@ export function CalendarSync({
     }
   }
 
-  async function disconnect() {
+  async function disconnect(accountId: string) {
     if (cbusy) return;
     setCbusy(true);
     setCmsg(null);
@@ -102,7 +105,7 @@ export function CalendarSync({
       const res = await fetch("/api/caldav/connect", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ disconnect: true }),
+        body: JSON.stringify({ disconnect: true, accountId }),
       });
       if (res.ok) router.refresh();
       else setCmsg("Couldn’t disconnect.");
@@ -145,8 +148,8 @@ export function CalendarSync({
       <div className="mt-3 border-t border-line2 pt-3">
         <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">⤵ Import by link</div>
         <p className="m-0 mb-2 text-[12.5px] leading-normal text-ink2">
-          Paste a published <span className="font-mono">.ics</span>/<span className="font-mono">webcal</span> link
-          (Google&rsquo;s secret iCal address, or any subscription URL).
+          Paste any published <span className="font-mono">.ics</span>/<span className="font-mono">webcal</span> link —
+          one per account. <b>Google:</b> Settings → that calendar → &ldquo;Secret address in iCal format.&rdquo;
         </p>
         <form onSubmit={importCal} className="flex flex-wrap items-center gap-2">
           <input
@@ -162,57 +165,72 @@ export function CalendarSync({
         {msg && <p className="m-0 mt-1.5 text-[12px] text-ink2">{msg}</p>}
       </div>
 
-      {/* iCloud — CalDAV */}
+      {/* CalDAV — multiple accounts */}
       <div className="mt-3 border-t border-line2 pt-3">
-        <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">🍎 Connect iCloud (direct)</div>
-        {caldavConnected ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[12.5px] text-good">
-              Connected{caldavUsername ? ` · ${caldavUsername}` : ""} ✓
-            </span>
-            <button
-              onClick={disconnect}
-              disabled={cbusy}
-              className="rounded-[8px] border border-line bg-card px-3 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-danger hover:text-danger disabled:opacity-50"
-            >
-              {cbusy ? "…" : "Disconnect"}
-            </button>
-          </div>
-        ) : (
-          <>
-            <p className="m-0 mb-2 text-[12.5px] leading-normal text-ink2">
-              No share-link needed. Create an{" "}
-              <a
-                href="https://account.apple.com"
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent underline"
-              >
-                app-specific password
-              </a>{" "}
-              and connect — your iCloud events import directly (stored encrypted).
-            </p>
-            <form onSubmit={connect} className="flex flex-wrap items-center gap-2">
-              <input
-                type="email"
-                value={appleId}
-                onChange={(e) => setAppleId(e.target.value)}
-                placeholder="Apple ID email"
-                className={inputCls}
-              />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="app-specific password (xxxx-xxxx-xxxx-xxxx)"
-                className={inputCls}
-              />
-              <button type="submit" disabled={cbusy || !appleId.trim() || !password.trim()} className={primaryBtn}>
-                {cbusy ? "Connecting…" : "Connect"}
-              </button>
-            </form>
-          </>
+        <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">🔗 Connect accounts (CalDAV)</div>
+
+        {caldavAccounts.length > 0 && (
+          <ul className="mb-2 space-y-1">
+            {caldavAccounts.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center gap-2 text-[12.5px]">
+                <span className="font-semibold text-good">✓ {a.username}</span>
+                {a.lastStatus && <span className="font-mono text-[10px] text-inkfaint">{a.lastStatus}</span>}
+                <button
+                  onClick={() => disconnect(a.id)}
+                  disabled={cbusy}
+                  className="ml-auto rounded-[7px] border border-line bg-card px-2.5 py-1 text-[11px] font-semibold text-ink2 transition hover:border-danger hover:text-danger disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
+
+        <p className="m-0 mb-2 text-[12.5px] leading-normal text-ink2">
+          Add an account directly with an{" "}
+          <a href="https://account.apple.com" target="_blank" rel="noreferrer" className="text-accent underline">
+            app-specific password
+          </a>{" "}
+          (iCloud/Fastmail/Yahoo). Stored encrypted. <i>Google uses the link box above, not this.</i>
+        </p>
+        <form onSubmit={connect} className="flex flex-wrap items-center gap-2">
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            className="rounded-[8px] border border-line bg-card px-2 py-1.5 text-[12.5px] text-ink outline-none"
+          >
+            <option value="icloud">iCloud</option>
+            <option value="fastmail">Fastmail</option>
+            <option value="yahoo">Yahoo</option>
+            <option value="custom">Other…</option>
+          </select>
+          <input
+            type="email"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="email"
+            className={inputCls}
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="app-specific password"
+            className={inputCls}
+          />
+          {provider === "custom" && (
+            <input
+              value={server}
+              onChange={(e) => setServer(e.target.value)}
+              placeholder="https://caldav.your-provider.com"
+              className={inputCls}
+            />
+          )}
+          <button type="submit" disabled={cbusy || !username.trim() || !password.trim()} className={primaryBtn}>
+            {cbusy ? "Connecting…" : caldavAccounts.length ? "Add account" : "Connect"}
+          </button>
+        </form>
         {cmsg && <p className="m-0 mt-1.5 text-[12px] text-ink2">{cmsg}</p>}
       </div>
     </div>

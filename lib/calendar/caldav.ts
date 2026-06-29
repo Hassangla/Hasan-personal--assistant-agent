@@ -268,24 +268,27 @@ export async function syncCaldavAccounts(userId: string): Promise<{ accounts: nu
   return { accounts: n, imported };
 }
 
-export async function caldavStatus(userId: string): Promise<{ connected: boolean; username?: string }> {
+export type CaldavAccount = { id: string; username: string; lastStatus: string | null };
+
+export async function caldavAccounts(userId: string): Promise<CaldavAccount[]> {
   const sb = supabaseAdmin();
   const { data } = await sb
     .from("caldav_accounts")
-    .select("username")
+    .select("id, username, last_status")
     .eq("user_id", userId)
     .eq("active", true)
-    .limit(1)
-    .maybeSingle();
-  return data ? { connected: true, username: data.username as string } : { connected: false };
+    .order("created_at", { ascending: true });
+  return ((data ?? []) as any[]).map((a) => ({ id: a.id, username: a.username, lastStatus: a.last_status ?? null }));
 }
 
-// Disconnect: deactivate accounts and drop the events they imported.
-export async function disconnectCaldav(userId: string): Promise<void> {
+// Disconnect one account (by id) or all: deactivate + drop its imported events.
+export async function disconnectCaldav(userId: string, accountId?: string): Promise<void> {
   const sb = supabaseAdmin();
-  const { data } = await sb.from("caldav_accounts").select("id").eq("user_id", userId).eq("active", true);
+  let q = sb.from("caldav_accounts").select("id").eq("user_id", userId).eq("active", true);
+  if (accountId) q = q.eq("id", accountId);
+  const { data } = await q;
   for (const a of (data ?? []) as any[]) {
     await sb.from("meetings").delete().eq("user_id", userId).like("external_uid", `caldav:${a.id}:%`);
+    await sb.from("caldav_accounts").update({ active: false }).eq("id", a.id);
   }
-  await sb.from("caldav_accounts").update({ active: false }).eq("user_id", userId).eq("active", true);
 }
