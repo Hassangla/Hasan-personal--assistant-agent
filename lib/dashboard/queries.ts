@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { USER_ID, USER_TIMEZONE } from "@/lib/config";
 import { AREA_META, areaMeta } from "@/lib/areas";
 import { calendarFeedPath } from "@/lib/calendar";
-import { caldavStatus } from "@/lib/calendar/caldav";
+import { caldavAccounts, type CaldavAccount } from "@/lib/calendar/caldav";
 
 // All reads for the dashboard. Pure data — NEVER calls the model. Run from a
 // server component so the service-role client stays server-side.
@@ -59,8 +59,7 @@ export type DashboardData = {
   plans: PlanCol[];
   meetings: MeetingRow[];
   calendarFeedPath: string;
-  caldavConnected: boolean;
-  caldavUsername: string | null;
+  caldavAccounts: CaldavAccount[];
   pendingCount: number;
 };
 
@@ -343,7 +342,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   }));
 
   const briefing = composeBriefing({ today, metrics, areas, chasingOthers });
-  const cal = await caldavStatus(USER_ID);
+  const accounts = await caldavAccounts(USER_ID);
 
   return {
     metrics,
@@ -358,8 +357,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     plans,
     meetings,
     calendarFeedPath: calendarFeedPath(),
-    caldavConnected: cal.connected,
-    caldavUsername: cal.username ?? null,
+    caldavAccounts: accounts,
     pendingCount: metrics.awaitingOK,
   };
 }
