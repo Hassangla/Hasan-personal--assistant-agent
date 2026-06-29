@@ -30,6 +30,11 @@ export type ProductivityData = {
   trend: DayBar[];
   byArea: AreaStat[];
   behind: AreaStat[];
+  delayedCount: number;
+  avgDelayDays: number;
+  maxDelayDays: number;
+  topDelays: { title: string; label: string; color: string; days: number }[];
+  delaysByArea: { label: string; color: string; count: number; avgDays: number; maxDays: number }[];
   pendingCount: number;
 };
 
@@ -42,6 +47,13 @@ function tzDate(d: Date): string {
   }).format(d);
 }
 
+// Whole calendar days between two YYYY-MM-DD strings.
+function dayDiff(fromYmd: string, toYmd: string): number {
+  const f = fromYmd.split("-").map(Number);
+  const t = toYmd.split("-").map(Number);
+  return Math.round((Date.UTC(t[0]!, t[1]! - 1, t[2]!) - Date.UTC(f[0]!, f[1]! - 1, f[2]!)) / 86400000);
+}
+
 export async function getProductivityData(): Promise<ProductivityData> {
   const sb = supabaseAdmin();
   const now = Date.now();
@@ -51,7 +63,7 @@ export async function getProductivityData(): Promise<ProductivityData> {
   const [taskRes, areaRes, pendingRes] = await Promise.all([
     sb
       .from("tasks")
-      .select("status,due_at,completed_at,area_id,urgency,nudge_count,escalation_level,delegated_to")
+      .select("title,status,due_at,completed_at,area_id,urgency,nudge_count,escalation_level,delegated_to")
       .eq("user_id", USER_ID)
       .limit(2000),
     sb.from("entities").select("id,name").eq("user_id", USER_ID).eq("kind", "area"),
@@ -93,6 +105,11 @@ export async function getProductivityData(): Promise<ProductivityData> {
     areaAgg.set(areaName, e);
   };
 
+  const delays: { title: string; area: string; days: number }[] = [];
+  const delayAreaAgg = new Map<string, { count: number; total: number; max: number }>();
+  let delaySum = 0,
+    maxDelay = 0;
+
   for (const t of tasks) {
     const areaName = t.area_id ? areaById.get(t.area_id) ?? "Miscellaneous/Other" : "Miscellaneous/Other";
     if (t.status === "done") {
@@ -120,6 +137,15 @@ export async function getProductivityData(): Promise<ProductivityData> {
         if (dd < todayStr) {
           overdue++;
           bump(areaName, "overdue");
+          const late = Math.max(1, dayDiff(dd, todayStr));
+          delaySum += late;
+          if (late > maxDelay) maxDelay = late;
+          delays.push({ title: t.title, area: areaName, days: late });
+          const da = delayAreaAgg.get(areaName) ?? { count: 0, total: 0, max: 0 };
+          da.count++;
+          da.total += late;
+          da.max = Math.max(da.max, late);
+          delayAreaAgg.set(areaName, da);
         } else if (dd === todayStr) {
           dueToday++;
         }
@@ -152,6 +178,29 @@ export async function getProductivityData(): Promise<ProductivityData> {
   const completionRate = denom ? Math.round((completedTotal / denom) * 100) : 0;
   const avgNudges = nudgeN ? Math.round((nudgeSum / nudgeN) * 10) / 10 : 0;
 
+  const delayedCount = overdue;
+  const avgDelayDays = delayedCount ? Math.round((delaySum / delayedCount) * 10) / 10 : 0;
+  const maxDelayDays = maxDelay;
+  const topDelays = delays
+    .sort((a, b) => b.days - a.days)
+    .slice(0, 8)
+    .map((dl) => {
+      const m = areaMeta(dl.area);
+      return { title: dl.title, label: m.label, color: m.color, days: dl.days };
+    });
+  const delaysByArea = [...delayAreaAgg.entries()]
+    .map(([area, e]) => {
+      const m = areaMeta(area);
+      return {
+        label: m.label,
+        color: m.color,
+        count: e.count,
+        avgDays: Math.round((e.total / e.count) * 10) / 10,
+        maxDays: e.max,
+      };
+    })
+    .sort((a, b) => b.count - a.count);
+
   return {
     completedTotal,
     completedWeek,
@@ -168,6 +217,11 @@ export async function getProductivityData(): Promise<ProductivityData> {
     trend,
     byArea,
     behind,
+    delayedCount,
+    avgDelayDays,
+    maxDelayDays,
+    topDelays,
+    delaysByArea,
     pendingCount: pendingRes.count ?? 0,
   };
 }

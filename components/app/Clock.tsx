@@ -28,9 +28,13 @@ export function Clock({ tz, mode }: { tz: string; mode: "header" | "hero" }) {
   if (mode === "header") {
     return (
       <>
-        <span suppressHydrationWarning>{date}</span>
-        <span className="text-[#C8C0B0]">·</span>
-        <span className="text-inkstrong" suppressHydrationWarning>{time}</span>
+        <span className="hidden whitespace-nowrap xl:inline" suppressHydrationWarning>
+          {date}
+        </span>
+        <span className="hidden text-[#C8C0B0] xl:inline">·</span>
+        <span className="whitespace-nowrap text-inkstrong" suppressHydrationWarning>
+          {time}
+        </span>
       </>
     );
   }
