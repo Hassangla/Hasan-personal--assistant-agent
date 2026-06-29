@@ -5,8 +5,6 @@ import { Clock } from "@/components/app/Clock";
 import { CaptureBar } from "@/components/app/CaptureBar";
 import { CompletableTaskRow } from "@/components/app/CompletableTaskRow";
 import { Card, SectionHeader, Eyebrow, AreaTag, Avatar } from "@/components/app/ui";
-import { CalendarSync } from "@/components/app/CalendarSync";
-import { headers } from "next/headers";
 import Link from "next/link";
 
 // Read-mostly window onto the agent. Rendered per request from Supabase; the
@@ -22,9 +20,6 @@ const METRIC_STYLE = [
 
 export default async function Dashboard() {
   const d = await getDashboardData();
-  const host = (await headers()).get("host") ?? "";
-  const calHttps = `https://${host}${d.calendarFeedPath}`;
-  const calWebcal = `webcal://${host}${d.calendarFeedPath}`;
   const metrics = [
     { label: "Open priorities", value: d.metrics.openPriorities },
     { label: "I'm chasing you", value: d.metrics.chasingYou },
@@ -187,31 +182,6 @@ export default async function Dashboard() {
               </div>
             </Card>
           </div>
-        </div>
-
-        {/* UPCOMING MEETINGS */}
-        <div className="mt-9">
-          <Card className="px-5 pb-5 pt-6 sm:px-7">
-            <SectionHeader index="✦" title="Upcoming" note="— meetings & calendar" meta={`${d.meetings.length} scheduled`} />
-            <div className="mt-2">
-              {d.meetings.length ? (
-                d.meetings.map((m) => (
-                  <div key={m.id} className="flex items-center gap-3 border-t border-line2 py-2.5">
-                    <span className="text-[15px]">🗓</span>
-                    <span className="min-w-0 flex-1 truncate text-[14px] font-medium text-inkstrong">{m.title}</span>
-                    {m.area && <AreaTag area={m.area} />}
-                    <span className="shrink-0 font-mono text-[11px] text-ink3">{m.startText}</span>
-                  </div>
-                ))
-              ) : (
-                <p className="py-3 text-[13px] text-ink3">
-                  No meetings scheduled — tell me on Telegram (&ldquo;meeting with Marina tomorrow 3pm&rdquo;) and it&apos;ll
-                  appear here and on your synced calendar.
-                </p>
-              )}
-            </div>
-            <CalendarSync httpsUrl={calHttps} webcalUrl={calWebcal} caldavAccounts={d.caldavAccounts} />
-          </Card>
         </div>
 
         {/* FOLLOWING UP */}

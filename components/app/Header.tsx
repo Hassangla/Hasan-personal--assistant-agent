@@ -10,7 +10,7 @@ export function Header({
   tz,
   width = "wide",
 }: {
-  active?: "dashboard" | "people" | "approvals" | "archive";
+  active?: "dashboard" | "calendar" | "people" | "approvals" | "archive";
   pendingCount?: number;
   tz: string;
   width?: "wide" | "narrow";
@@ -18,6 +18,7 @@ export function Header({
   const maxW = width === "narrow" ? "max-w-[980px]" : "max-w-[1180px]";
   const nav: { key: NonNullable<typeof active>; label: string; href: string }[] = [
     { key: "dashboard", label: "Dashboard", href: "/" },
+    { key: "calendar", label: "Calendar", href: "/calendar" },
     { key: "people", label: "People", href: "/people" },
     { key: "approvals", label: "Approvals", href: "/approvals" },
     { key: "archive", label: "Archive", href: "/archive" },
@@ -38,7 +39,7 @@ export function Header({
           </span>
         </Link>
 
-        <nav className="flex items-center gap-0.5">
+        <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
           {nav.map((n) => {
             const on = n.key === active;
             const badge = n.key === "approvals" ? pendingCount : 0;
@@ -46,7 +47,7 @@ export function Header({
               <Link
                 key={n.key}
                 href={n.href}
-                className={`flex items-center gap-1.5 rounded-[9px] px-2.5 py-[7px] text-[12px] font-semibold no-underline transition sm:px-[13px] sm:text-[13px] ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-[9px] px-2.5 py-[7px] text-[12px] font-semibold no-underline transition sm:px-[13px] sm:text-[13px] ${
                   on ? "text-accent" : "text-[#8C8474] hover:bg-black/5 hover:text-[#3F3A32]"
                 }`}
                 style={on ? { background: "#C75F3F14" } : undefined}
