@@ -15,7 +15,10 @@ export function Header({
   tz: string;
   width?: "wide" | "narrow";
 }) {
-  const maxW = width === "narrow" ? "max-w-[980px]" : "max-w-[1180px]";
+  // Header always spans the wider track so the full nav fits, even on pages
+  // whose content is the narrower 980 column.
+  void width;
+  const maxW = "max-w-[1180px]";
   const nav: { key: NonNullable<typeof active>; label: string; href: string }[] = [
     { key: "dashboard", label: "Dashboard", href: "/" },
     { key: "calendar", label: "Calendar", href: "/calendar" },
@@ -65,7 +68,7 @@ export function Header({
           })}
         </nav>
 
-        <div className="hidden items-center gap-[18px] font-mono text-[11px] tracking-[0.06em] text-[#8C8474] md:flex">
+        <div className="hidden shrink-0 items-center gap-3 whitespace-nowrap font-mono text-[11px] tracking-[0.06em] text-[#8C8474] md:flex lg:gap-[18px]">
           <Clock tz={tz} mode="header" />
           <span className="inline-flex items-center gap-[7px] text-good">
             <span

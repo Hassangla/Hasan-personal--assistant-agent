@@ -44,6 +44,53 @@ export default async function ProductivityPage() {
           <Stat value={d.dropped} label="Dropped" sub="abandoned tasks" color="#828A98" />
         </div>
 
+        {/* DELAYS */}
+        {d.delayedCount > 0 ? (
+          <Card className="mt-6 px-5 pb-4 pt-6 sm:px-7">
+            <SectionHeader
+              index="⏳"
+              title="Delays"
+              size={20}
+              note={`— ${d.delayedCount} overdue · avg ${d.avgDelayDays}d late · worst ${d.maxDelayDays}d`}
+            />
+            <div className="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">Most delayed</div>
+                {d.topDelays.map((t, i) => (
+                  <div key={i} className="flex items-center gap-2 border-t border-line2 py-1.5 text-[13px]">
+                    <span className="min-w-0 flex-1 truncate text-inkstrong">{t.title}</span>
+                    <span style={{ color: t.color }} className="shrink-0 text-[10px] font-semibold">
+                      {t.label}
+                    </span>
+                    <span className="w-[58px] shrink-0 text-right font-mono text-[11px] font-semibold text-danger">
+                      {t.days}d late
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">By area</div>
+                {d.delaysByArea.map((a, i) => (
+                  <div key={i} className="flex items-center gap-2 border-t border-line2 py-1.5 text-[13px]">
+                    <span style={{ background: a.color }} className="h-2 w-2 shrink-0 rounded-full" />
+                    <span className="min-w-0 flex-1 truncate font-semibold" style={{ color: a.color }}>
+                      {a.label}
+                    </span>
+                    <span className="shrink-0 font-mono text-[10.5px] text-ink3">
+                      {a.count} late · avg {a.avgDays}d · max {a.maxDays}d
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <Card className="mt-6 px-5 pb-4 pt-6 sm:px-7">
+            <SectionHeader index="⏳" title="Delays" size={20} note="— nothing overdue" />
+            <p className="mt-2 text-[13px] text-ink3">No delayed tasks — you're on top of your deadlines. 🎉</p>
+          </Card>
+        )}
+
         {/* TREND */}
         <Card className="mt-6 px-5 pb-5 pt-6 sm:px-7">
           <SectionHeader index="01" title="Completed" size={20} note="— last 14 days" />
