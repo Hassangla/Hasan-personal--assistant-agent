@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { USER_ID } from "@/lib/config";
+import { supabaseAdmin } from "@/lib/supabase/server";
 import { executeTool } from "@/lib/agent/execute";
 
 // Manually add a task (no chat). Reuses create_task so it gets the SAME
@@ -31,6 +32,12 @@ export async function POST(req: Request) {
   const person = typeof body.delegate_to === "string" ? body.delegate_to.trim() : "";
   if (person && created?.id) {
     await executeTool("delegate_task", { task_id: created.id, person }, { userId: USER_ID });
+  }
+
+  // Optionally link it to a goal (manual add under a goal on the Goals page).
+  const goalId = typeof body.goal_id === "string" ? body.goal_id.trim() : "";
+  if (goalId && created?.id) {
+    await supabaseAdmin().from("tasks").update({ goal_id: goalId }).eq("id", created.id).eq("user_id", USER_ID);
   }
 
   return NextResponse.json({ ok: true, task: created });
