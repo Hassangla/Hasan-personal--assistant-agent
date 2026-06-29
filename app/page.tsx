@@ -270,33 +270,6 @@ export default async function Dashboard() {
           </Card>
         </div>
 
-        {/* PLANS */}
-        <div className="mt-9">
-          <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">08</span>
-            <h2 className="m-0 font-display text-[21px] font-bold tracking-[-0.01em] text-ink">Plans</h2>
-            <span className="hidden text-[13px] text-ink3 sm:inline">— reviewed on a rhythm</span>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {d.plans.map((pl) => (
-              <Card key={pl.horizon} className="rounded-[18px] px-5 py-5 sm:px-[22px]">
-                <Eyebrow className="mb-1">{pl.horizon}</Eyebrow>
-                <div className="mb-3 text-[13px] text-ink3">{pl.window}</div>
-                {pl.items.length ? (
-                  pl.items.map((it, i) => (
-                    <div key={i} className="flex items-start gap-2.5 border-t border-[#F4EFE5] py-[7px]">
-                      <span className="font-mono text-[13px] text-[#CFC6B3]">—</span>
-                      <span className="text-[14px] font-medium leading-snug text-inkstrong">{it}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="py-2 text-[13px] text-inkfaint">Nothing filed yet.</div>
-                )}
-              </Card>
-            ))}
-          </div>
-        </div>
-
         <div className="mt-11 text-center text-[14px] text-ink3">
           That's the picture. Message me on Telegram and I'll take it from here.
         </div>
