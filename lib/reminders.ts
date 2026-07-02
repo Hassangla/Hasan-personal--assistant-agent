@@ -98,6 +98,22 @@ export async function pullForReminders(userId: string, dry = false): Promise<Rem
   return { add, remove };
 }
 
+// Recovery: put every open platform-born task back in the pull queue (e.g.
+// after a Shortcut misfire consumed them). Reminder-born tasks (reminders_key
+// set) are skipped — they already live in Reminders.
+export async function requeueReminders(userId: string): Promise<number> {
+  const { data } = await supabaseAdmin()
+    .from("tasks")
+    .update({ reminders_exported_at: null })
+    .eq("user_id", userId)
+    .in("status", OPEN)
+    .is("delegated_to", null)
+    .is("reminders_key", null)
+    .not("reminders_exported_at", "is", null)
+    .select("id");
+  return (data ?? []).length;
+}
+
 const MARKER = /pa:([0-9a-f-]{36})/i;
 
 export type RemindersPush =
