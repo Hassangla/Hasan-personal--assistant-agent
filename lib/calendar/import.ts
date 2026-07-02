@@ -36,6 +36,13 @@ export async function syncSource(src: Source): Promise<number> {
     return 0;
   }
 
+  // The user pasted an HTML/share-page link instead of the ICS one — the
+  // fetch succeeds but there's no calendar in it. Say so, don't report "ok".
+  if (!/BEGIN:VCALENDAR/i.test(text.slice(0, 4000))) {
+    await markSource(src.id, "not a calendar feed — use the ICS link (ends in .ics), not the HTML one");
+    return 0;
+  }
+
   let events;
   try {
     events = parseIcs(text);
@@ -45,6 +52,7 @@ export async function syncSource(src: Source): Promise<number> {
     await markSource(src.id, `parse error: ${String(e?.message ?? e).slice(0, 80)}`);
     return 0;
   }
+  const rawVeventCount = (text.match(/BEGIN:VEVENT/g) ?? []).length;
   const now = Date.now();
   const label = src.label || "subscription";
   let count = 0;
@@ -103,7 +111,19 @@ export async function syncSource(src: Source): Promise<number> {
     count++;
   }
 
-  await markSource(src.id, `ok · ${count} events`);
+  // Make "0 events" self-explanatory: an empty-but-valid feed (fresh Outlook
+  // publish links can serve empty for a while) reads differently from a feed
+  // whose events all fall outside the import window.
+  let status = `ok · ${count} events`;
+  if (count === 0) {
+    status =
+      rawVeventCount === 0
+        ? "ok · feed is valid but empty — new Outlook links can take a while to fill"
+        : events.length === 0
+          ? `found ${rawVeventCount} events but none were parseable`
+          : `ok · ${rawVeventCount} events in feed, none in the sync window`;
+  }
+  await markSource(src.id, status);
   return count;
 }
 
