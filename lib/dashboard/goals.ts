@@ -2,7 +2,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { USER_ID } from "@/lib/config";
 
-export type GoalTask = { id: string; title: string; status: string; area: string | null };
+export type GoalTask = { id: string; title: string; status: string; area: string | null; dueIso: string | null };
 export type Goal = {
   id: string;
   horizon: string;
@@ -34,7 +34,7 @@ export async function getGoalsData(): Promise<GoalsData> {
       .limit(60),
     sb
       .from("tasks")
-      .select("id,title,status,area_id,goal_id,completed_at")
+      .select("id,title,status,area_id,goal_id,due_at,completed_at")
       .eq("user_id", USER_ID)
       .not("goal_id", "is", null)
       .limit(600),
@@ -70,6 +70,7 @@ export async function getGoalsData(): Promise<GoalsData> {
           title: t.title,
           status: t.status,
           area: t.area_id ? areaById.get(t.area_id) ?? null : null,
+          dueIso: t.due_at ?? null,
         })),
     };
   });

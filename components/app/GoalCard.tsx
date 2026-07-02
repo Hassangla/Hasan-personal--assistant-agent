@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
+import { TaskTimer } from "@/components/app/TaskTimer";
 import type { Goal } from "@/lib/dashboard/goals";
 
 // One goal: title, progress (done/total + bar), its linked tasks, and an inline
@@ -10,6 +11,7 @@ import type { Goal } from "@/lib/dashboard/goals";
 // rolls up). The new task still gets the agent's follow-up logic.
 export function GoalCard({ goal }: { goal: Goal }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,14 +57,20 @@ export function GoalCard({ goal }: { goal: Goal }) {
             return (
               <div key={t.id} className="flex items-center gap-2 border-t border-line2 py-1.5 text-[13px]">
                 <span className={done ? "text-good" : "text-inkfaint"}>{done ? "✓" : "○"}</span>
-                <span className={`min-w-0 flex-1 truncate ${done ? "text-ink3 line-through" : "text-inkstrong"}`}>
+                <button
+                  type="button"
+                  onClick={() => router.push(`${pathname}?task=${t.id}`)}
+                  title="Open task details"
+                  className={`min-w-0 flex-1 truncate text-left hover:underline ${done ? "text-ink3 line-through" : "text-inkstrong"}`}
+                >
                   {t.title}
-                </span>
+                </button>
                 {m && (
                   <span style={{ color: m.color }} className="shrink-0 text-[10px] font-semibold">
                     {m.label}
                   </span>
                 )}
+                {!done && t.dueIso && <TaskTimer dueIso={t.dueIso} />}
               </div>
             );
           })
