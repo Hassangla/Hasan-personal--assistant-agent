@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { USER_ID, USER_TIMEZONE } from "@/lib/config";
 import { calendarFeedPath } from "@/lib/calendar";
 import { caldavAccounts, type CaldavAccount } from "@/lib/calendar/caldav";
+import { listCalendarSources, type CalSource } from "@/lib/calendar/import";
 
 export type CalMeeting = {
   id: string;
@@ -16,6 +17,7 @@ export type CalendarData = {
   past: CalMeeting[];
   calendarFeedPath: string;
   caldavAccounts: CaldavAccount[];
+  sources: CalSource[];
   pendingCount: number;
 };
 
@@ -67,13 +69,14 @@ export async function getCalendarData(): Promise<CalendarData> {
       location: m.location ?? null,
     }));
 
-  const accounts = await caldavAccounts(USER_ID);
+  const [accounts, sources] = await Promise.all([caldavAccounts(USER_ID), listCalendarSources(USER_ID)]);
 
   return {
     upcoming: map((upRes.data ?? []) as any[]),
     past: map((pastRes.data ?? []) as any[]),
     calendarFeedPath: calendarFeedPath(),
     caldavAccounts: accounts,
+    sources,
     pendingCount: pendingRes.count ?? 0,
   };
 }

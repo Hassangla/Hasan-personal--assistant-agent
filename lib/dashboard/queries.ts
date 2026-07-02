@@ -18,6 +18,16 @@ export type TodayTask = {
   goalTitle: string | null;
 };
 export type GoalProgress = { id: string; title: string; horizon: string; done: number; total: number };
+export type TodayAgendaItem = {
+  id: string;
+  kind: "event" | "task";
+  timeText: string; // "14:30" | "All day" | "Due 17:00" | "Overdue"
+  sortKey: number; // ms for time-ordering; all-day = 0, overdue = -1
+  title: string;
+  area: string | null;
+  location: string | null;
+  overdue: boolean;
+};
 export type AreaCard = {
   slug: string;
   label: string;
@@ -58,6 +68,8 @@ export type DashboardData = {
   people: PersonRow[];
   plans: PlanCol[];
   goalsProgress: GoalProgress[];
+  todayAgenda: TodayAgendaItem[];
+  todayLabel: string;
   pendingCount: number;
 };
 
@@ -129,7 +141,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const sb = supabaseAdmin();
   const OPEN = ["open", "reminded", "escalated", "snoozed"];
 
-  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes, goalTaskRes] = await Promise.all([
+  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes, goalTaskRes, meetingRes] = await Promise.all([
     sb.from("entities").select("id,name").eq("user_id", USER_ID).eq("kind", "area"),
     sb
       .from("tasks")
@@ -167,6 +179,15 @@ export async function getDashboardData(): Promise<DashboardData> {
       .eq("user_id", USER_ID)
       .eq("status", "pending"),
     sb.from("tasks").select("goal_id,status").eq("user_id", USER_ID).not("goal_id", "is", null).limit(1000),
+    sb
+      .from("meetings")
+      .select("id,title,starts_at,location,area_id,all_day,status")
+      .eq("user_id", USER_ID)
+      .eq("status", "scheduled")
+      .gte("starts_at", new Date(Date.now() - 18 * 3600000).toISOString())
+      .lte("starts_at", new Date(Date.now() + 30 * 3600000).toISOString())
+      .order("starts_at", { ascending: true })
+      .limit(50),
   ]);
 
   const areaById = new Map<string, string>();
@@ -220,6 +241,51 @@ export async function getDashboardData(): Promise<DashboardData> {
     .filter((g) => g.total > 0)
     .sort((a, b) => b.total - a.total)
     .slice(0, 4);
+
+  // Today's agenda: real events happening today + the user's tasks due today
+  // (or overdue), merged and time-ordered. Due-today tasks also stay in To-Do.
+  const todayDate = todayStr();
+  const agendaEvents: TodayAgendaItem[] = ((meetingRes.data ?? []) as any[])
+    .filter((m) => (m.all_day ? String(m.starts_at).slice(0, 10) === todayDate : tzParts(m.starts_at).date === todayDate))
+    .map((m) => ({
+      id: m.id,
+      kind: "event" as const,
+      timeText: m.all_day ? "All day" : tzParts(m.starts_at).time,
+      sortKey: m.all_day ? 0 : new Date(m.starts_at).getTime(),
+      title: m.title,
+      area: areaNameOf(m.area_id),
+      location: m.location ?? null,
+      overdue: false,
+    }));
+  const agendaTasks: TodayAgendaItem[] = own
+    .filter((t) => {
+      const d = dueLabel(t.due_at);
+      return !!d && d.kind === "due";
+    })
+    .map((t) => {
+      const { date, time } = tzParts(t.due_at);
+      const overdue = date < todayDate;
+      const timed = time !== "23:59" && time !== "00:00";
+      return {
+        id: t.id,
+        kind: "task" as const,
+        timeText: overdue ? "Overdue" : timed ? `Due ${time}` : "Due today",
+        sortKey: overdue ? -1 : timed ? new Date(t.due_at).getTime() : 0,
+        title: t.title,
+        area: areaNameOf(t.area_id),
+        location: null,
+        overdue,
+      };
+    });
+  const todayAgenda: TodayAgendaItem[] = [...agendaEvents, ...agendaTasks]
+    .sort((a, b) => a.sortKey - b.sortKey)
+    .slice(0, 8);
+  const todayLabel = new Intl.DateTimeFormat("en-GB", {
+    timeZone: USER_TIMEZONE,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date());
 
   // Metrics.
   const chasingYouTasks = own.filter((t) => t.status === "reminded" || t.status === "escalated");
@@ -347,6 +413,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     people,
     plans,
     goalsProgress,
+    todayAgenda,
+    todayLabel,
     pendingCount: metrics.awaitingOK,
   };
 }

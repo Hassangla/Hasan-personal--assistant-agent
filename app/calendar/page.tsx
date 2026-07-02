@@ -58,8 +58,13 @@ export default async function CalendarPage() {
 
         {/* SYNC */}
         <Card className="mt-6 px-5 pb-5 pt-6 sm:px-7">
-          <SectionHeader index="02" title="Sync & connect" size={20} note="— Google · iCloud · iOS" />
-          <CalendarSync httpsUrl={calHttps} webcalUrl={calWebcal} caldavAccounts={d.caldavAccounts} />
+          <SectionHeader index="02" title="Sync & connect" size={20} note="— Google · iCloud · Yahoo · Outlook · Proton · .edu" />
+          <CalendarSync
+            httpsUrl={calHttps}
+            webcalUrl={calWebcal}
+            caldavAccounts={d.caldavAccounts}
+            sources={d.sources}
+          />
         </Card>
 
         {/* PAST */}
