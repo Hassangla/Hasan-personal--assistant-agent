@@ -8,6 +8,23 @@ import { useState } from "react";
 // phone-created reminders back, both in one run.
 export function RemindersSync({ pullUrl, pushUrl }: { pullUrl: string; pushUrl: string }) {
   const [copied, setCopied] = useState<"pull" | "push" | null>(null);
+  const [requeueMsg, setRequeueMsg] = useState<string | null>(null);
+  const [requeueBusy, setRequeueBusy] = useState(false);
+
+  async function requeue() {
+    if (requeueBusy) return;
+    setRequeueBusy(true);
+    setRequeueMsg(null);
+    try {
+      const res = await fetch(pullUrl.replace(/\/pull$/, "/requeue"), { method: "POST" });
+      const j = await res.json().catch(() => ({}));
+      setRequeueMsg(res.ok ? `Re-queued ${j.requeued ?? 0} task(s) — run the Shortcut to import them.` : "Couldn’t re-queue.");
+    } catch {
+      setRequeueMsg("Network error.");
+    } finally {
+      setRequeueBusy(false);
+    }
+  }
 
   async function copy(kind: "pull" | "push", value: string) {
     try {
@@ -60,6 +77,20 @@ export function RemindersSync({ pullUrl, pushUrl }: { pullUrl: string; pushUrl: 
         <p className="m-0 mt-2 text-[11px] text-inkfaint">
           These URLs are credentials — anyone with them can read/add your tasks. Keep them inside the Shortcut only.
         </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-line2 pt-2">
+          <button
+            onClick={requeue}
+            disabled={requeueBusy}
+            className="rounded-[8px] border border-line bg-card px-2.5 py-1 text-[11px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32] disabled:opacity-50"
+          >
+            {requeueBusy ? "Re-queuing…" : "↺ Re-queue all open tasks"}
+          </button>
+          <span className="text-[11px] text-inkfaint">
+            Shortcut misfired and the reminders were never created? This puts every open task back in the queue. (If
+            some reminders DID get created, delete them first — the next run re-adds everything queued.)
+          </span>
+          {requeueMsg && <span className="basis-full text-[11.5px] text-ink2">{requeueMsg}</span>}
+        </div>
       </div>
 
       <details className="rounded-[12px] border border-line2 bg-cardalt px-3.5 py-3">
