@@ -121,6 +121,7 @@ export type RemindersPush =
   | { ok: true; completed: string }
   | { ok: true; dup: true }
   | { ok: true; noop: true }
+  | { ok: true; skipped: string }
   | { ok: false; error: string };
 
 export async function pushFromReminders(userId: string, body: any): Promise<RemindersPush> {
@@ -162,6 +163,18 @@ export async function pushFromReminders(userId: string, body: any): Promise<Remi
     return { ok: false, error: `key is the literal text "${key}" — insert the Repeat Item ▸ Creation Date variable, not typed words` };
   }
   if (MARKER.test(String(body?.notes ?? ""))) return { ok: true, noop: true }; // platform-born, never echo
+
+  // Flood backstop: a Shortcut filter mishap once pushed a 224-item backlog of
+  // old reminders. If the key parses as a date older than 60 days, skip it
+  // (200, so the Shortcut's loop keeps going) unless force:true is sent for an
+  // intentional backlog import. Unparseable keys stay opaque and pass through.
+  const force = body?.force === true || body?.force === "true";
+  if (!force) {
+    const keyMs = Date.parse(key.replace(/\bat\b/i, " ").replace(/\s+/g, " "));
+    if (!Number.isNaN(keyMs) && Date.now() - keyMs > 60 * 86400000) {
+      return { ok: true, skipped: "reminder older than 60 days — send force:true to import backlog intentionally" };
+    }
+  }
 
   const { data: existing } = await sb
     .from("tasks")
