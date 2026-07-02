@@ -98,6 +98,41 @@ export default async function Dashboard() {
           })}
         </div>
 
+        {/* GOALS PROGRESS STRIP — connects the dashboard to Goals */}
+        {d.goalsProgress.length > 0 && (
+          <div className="mt-[18px]">
+            <div className="mb-2 flex items-baseline justify-between">
+              <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink3">Goals · progress</span>
+              <Link href="/goals" className="font-mono text-[11px] text-accent no-underline hover:underline">
+                all goals →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {d.goalsProgress.map((g) => {
+                const pct = g.total ? Math.round((g.done / g.total) * 100) : 0;
+                return (
+                  <Link
+                    key={g.id}
+                    href="/goals"
+                    className="block rounded-[14px] border border-line bg-card p-3.5 no-underline transition hover:-translate-y-[2px]"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-inkstrong">{g.title}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-ink3">{pct}%</span>
+                    </div>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-line2">
+                      <div className="h-full rounded-full bg-good" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="mt-1.5 font-mono text-[10px] text-inkfaint">
+                      {g.done}/{g.total} tasks · {g.horizon}-term
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* MAIN GRID */}
         <div className="mt-[34px] grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.55fr_1fr]">
           {/* TODAY */}
@@ -114,6 +149,8 @@ export default async function Dashboard() {
                     badge={t.priority}
                     area={t.area}
                     state={{ color: t.state.color, label: t.state.label }}
+                    dueIso={t.dueIso}
+                    goalTitle={t.goalTitle}
                   />
                 ))
               ) : (

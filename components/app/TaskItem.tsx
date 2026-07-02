@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
+import { TaskTimer } from "@/components/app/TaskTimer";
 
 type StateChip = { color: string; label: string };
 
@@ -17,6 +18,8 @@ export function TaskItem({
   state,
   variant,
   who,
+  dueIso,
+  goalTitle,
 }: {
   id: string;
   title: string;
@@ -25,6 +28,8 @@ export function TaskItem({
   state?: StateChip | null;
   variant: "todo" | "delegated";
   who?: string | null;
+  dueIso?: string | null;
+  goalTitle?: string | null;
 }) {
   const router = useRouter();
   const [gone, setGone] = useState<false | "done" | "deleted">(false);
@@ -121,6 +126,11 @@ export function TaskItem({
             {m ? ` · ${m.label}` : ""}
           </span>
         )}
+        {variant === "todo" && goalTitle && (
+          <span className="block truncate text-[11px] text-ink3" title="Contributes to this goal">
+            🎯 {goalTitle}
+          </span>
+        )}
       </div>
 
       {variant === "todo" && m && (
@@ -132,14 +142,20 @@ export function TaskItem({
           {m.label}
         </span>
       )}
-      {variant === "todo" && state && !gone && (
-        <span
-          style={{ color: state.color, background: state.color + "16" }}
-          className="shrink-0 whitespace-nowrap rounded-[6px] px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.03em]"
-        >
-          {state.label}
-        </span>
-      )}
+      {variant === "todo" &&
+        !gone &&
+        (dueIso ? (
+          <TaskTimer dueIso={dueIso} />
+        ) : (
+          state && (
+            <span
+              style={{ color: state.color, background: state.color + "16" }}
+              className="shrink-0 whitespace-nowrap rounded-[6px] px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.03em]"
+            >
+              {state.label}
+            </span>
+          )
+        ))}
 
       {/* MOVE + DELETE */}
       {!gone && (
