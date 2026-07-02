@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
+import { TaskTimer } from "@/components/app/TaskTimer";
 
 type StateChip = { color: string; label: string };
 
@@ -21,6 +22,7 @@ export function CompletableTaskRow({
   note,
   noteColor,
   who,
+  dueIso,
 }: {
   id: string;
   title: string;
@@ -31,8 +33,10 @@ export function CompletableTaskRow({
   note?: string | null;
   noteColor?: string | null;
   who?: string | null;
+  dueIso?: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -96,9 +100,15 @@ export function CompletableTaskRow({
       <div className="-mx-2.5 flex items-center gap-[13px] rounded-[10px] border-t border-line2 px-2.5 py-[13px] hover:bg-cardalt">
         {circle}
         {badge && <span className="w-5 shrink-0 font-mono text-[11px] font-semibold text-inkfaint">{badge}</span>}
-        <span className="min-w-0 flex-1 truncate text-[15px] font-medium" style={titleStyle}>
+        <button
+          type="button"
+          onClick={() => router.push(`${pathname}?task=${id}`)}
+          title="Open task details"
+          className="block min-w-0 flex-1 truncate text-left text-[15px] font-medium hover:underline"
+          style={titleStyle}
+        >
           {title}
-        </span>
+        </button>
         {layout === "today" && m && (
           <span
             style={{ color: m.color, background: m.color + "14" }}
@@ -110,6 +120,8 @@ export function CompletableTaskRow({
         )}
         {done ? (
           donePill
+        ) : dueIso ? (
+          <TaskTimer dueIso={dueIso} />
         ) : (
           state && (
             <span

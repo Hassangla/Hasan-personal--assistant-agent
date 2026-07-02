@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 
@@ -32,6 +32,7 @@ export function TaskItem({
   goalTitle?: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [gone, setGone] = useState<false | "done" | "deleted">(false);
   const [busy, setBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
@@ -117,9 +118,15 @@ export function TaskItem({
       {badge && <span className="w-5 shrink-0 font-mono text-[11px] font-semibold text-inkfaint">{badge}</span>}
 
       <div className="min-w-0 flex-1">
-        <span className="block truncate text-[14.5px] font-medium" style={titleStyle}>
+        <button
+          type="button"
+          onClick={() => router.push(`${pathname}?task=${id}`)}
+          title="Open task details"
+          className="block w-full truncate text-left text-[14.5px] font-medium hover:underline"
+          style={titleStyle}
+        >
           {title}
-        </span>
+        </button>
         {variant === "delegated" && who && (
           <span className="block truncate text-[11px] text-ink3">
             with {who}
