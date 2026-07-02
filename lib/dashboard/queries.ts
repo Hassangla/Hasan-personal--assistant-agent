@@ -14,7 +14,10 @@ export type TodayTask = {
   area: string | null;
   priority: string; // P1..Pn
   state: TaskState;
+  dueIso: string | null;
+  goalTitle: string | null;
 };
+export type GoalProgress = { id: string; title: string; horizon: string; done: number; total: number };
 export type AreaCard = {
   slug: string;
   label: string;
@@ -54,6 +57,7 @@ export type DashboardData = {
   inbox: InboxItem[];
   people: PersonRow[];
   plans: PlanCol[];
+  goalsProgress: GoalProgress[];
   pendingCount: number;
 };
 
@@ -125,12 +129,12 @@ export async function getDashboardData(): Promise<DashboardData> {
   const sb = supabaseAdmin();
   const OPEN = ["open", "reminded", "escalated", "snoozed"];
 
-  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes] = await Promise.all([
+  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes, goalTaskRes] = await Promise.all([
     sb.from("entities").select("id,name").eq("user_id", USER_ID).eq("kind", "area"),
     sb
       .from("tasks")
       .select(
-        "id,title,status,due_at,priority_score,urgency,area_id,person_id,delegated_to,nudge_count,last_nudged_at,updated_at",
+        "id,title,status,due_at,priority_score,urgency,area_id,person_id,delegated_to,nudge_count,last_nudged_at,updated_at,goal_id",
       )
       .eq("user_id", USER_ID)
       .in("status", OPEN)
@@ -162,11 +166,15 @@ export async function getDashboardData(): Promise<DashboardData> {
       .select("id", { count: "exact", head: true })
       .eq("user_id", USER_ID)
       .eq("status", "pending"),
+    sb.from("tasks").select("goal_id,status").eq("user_id", USER_ID).not("goal_id", "is", null).limit(1000),
   ]);
 
   const areaById = new Map<string, string>();
   for (const a of (areaRes.data ?? []) as any[]) areaById.set(a.id, a.name);
   const areaNameOf = (id: string | null): string | null => (id ? areaById.get(id) ?? null : null);
+
+  const plansById = new Map<string, { title: string; horizon: string }>();
+  for (const p of (planRes.data ?? []) as any[]) plansById.set(p.id, { title: p.title, horizon: p.horizon });
 
   const tasks = (taskRes.data ?? []) as any[];
   const personArea = new Map<string, string>();
@@ -194,7 +202,24 @@ export async function getDashboardData(): Promise<DashboardData> {
     area: areaNameOf(t.area_id),
     priority: `P${i + 1}`,
     state: taskState(t),
+    dueIso: t.due_at ?? null,
+    goalTitle: t.goal_id ? plansById.get(t.goal_id)?.title ?? null : null,
   }));
+
+  // Goals progress (dashboard strip): linked-task completion per active goal.
+  const goalAgg = new Map<string, { done: number; total: number }>();
+  for (const gt of (goalTaskRes.data ?? []) as any[]) {
+    if (!gt.goal_id) continue;
+    const e = goalAgg.get(gt.goal_id) ?? { done: 0, total: 0 };
+    e.total += 1;
+    if (gt.status === "done") e.done += 1;
+    goalAgg.set(gt.goal_id, e);
+  }
+  const goalsProgress: GoalProgress[] = [...plansById.entries()]
+    .map(([id, p]) => ({ id, title: p.title, horizon: p.horizon, ...(goalAgg.get(id) ?? { done: 0, total: 0 }) }))
+    .filter((g) => g.total > 0)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 4);
 
   // Metrics.
   const chasingYouTasks = own.filter((t) => t.status === "reminded" || t.status === "escalated");
@@ -321,6 +346,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     inbox,
     people,
     plans,
+    goalsProgress,
     pendingCount: metrics.awaitingOK,
   };
 }
