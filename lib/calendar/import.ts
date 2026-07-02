@@ -36,7 +36,15 @@ export async function syncSource(src: Source): Promise<number> {
     return 0;
   }
 
-  const events = parseIcs(text);
+  let events;
+  try {
+    events = parseIcs(text);
+  } catch (e: any) {
+    // Surface parse failures in the "Linked calendars" list instead of
+    // letting them abort silently.
+    await markSource(src.id, `parse error: ${String(e?.message ?? e).slice(0, 80)}`);
+    return 0;
+  }
   const now = Date.now();
   const label = src.label || "subscription";
   let count = 0;

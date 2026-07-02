@@ -1,9 +1,13 @@
 import { USER_TIMEZONE } from "@/lib/config";
 import { toUtcIso } from "@/lib/time";
+import { resolveIcsTz } from "@/lib/calendar/tz";
 
-// A pragmatic iCalendar (RFC 5545) parser — enough for the published feeds Apple
-// Calendar and Google Calendar emit. Handles line folding, common escaping, and
-// DTSTART/DTEND in UTC (Z), TZID=<IANA> local, or all-day (VALUE=DATE).
+// A pragmatic iCalendar (RFC 5545) parser — enough for the published feeds
+// Apple, Google, Outlook/Exchange, and Proton emit. Handles line folding,
+// common escaping, and DTSTART/DTEND in UTC (Z), TZID local (IANA or Windows
+// names like "Eastern Standard Time", mapped via resolveIcsTz), or all-day
+// (VALUE=DATE). Unknown zones fall back to the user's timezone, and a
+// malformed event is skipped rather than aborting the import.
 // Recurring events (RRULE) are imported as their base occurrence only.
 
 export type ParsedEvent = {
@@ -42,12 +46,22 @@ function valueOf(line: string): string {
   return line.slice(line.indexOf(":") + 1).trim();
 }
 
+// Split "NAME;PARAM=x:VALUE" at the first colon OUTSIDE double quotes — Outlook
+// quotes TZIDs that themselves contain a colon: TZID="(UTC-05:00) Eastern…".
+function splitProp(line: string): { params: string; value: string } {
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') inQ = !inQ;
+    else if (c === ":" && !inQ) return { params: line.slice(0, i), value: line.slice(i + 1).trim() };
+  }
+  return { params: line, value: "" };
+}
+
 // Parse a DTSTART/DTEND line → UTC ISO + all-day flag.
 function parseDt(line: string): { iso: string | null; allDay: boolean } {
-  const colon = line.indexOf(":");
-  const params = line.slice(0, colon);
-  const value = line.slice(colon + 1).trim();
-  const tzid = params.match(/TZID=([^;:]+)/i)?.[1];
+  const { params, value } = splitProp(line);
+  const tzid = params.match(/TZID=("[^"]*"|[^;:]+)/i)?.[1];
   const isDate = /VALUE=DATE\b/i.test(params) || /^\d{8}$/.test(value);
 
   if (isDate) {
@@ -65,8 +79,9 @@ function parseDt(line: string): { iso: string | null; allDay: boolean } {
   if (z === "Z") {
     return { iso: new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s)).toISOString(), allDay: false };
   }
-  // TZID local time, or floating → interpret in the source tz (fallback to user's).
-  const tz = tzid || USER_TIMEZONE;
+  // TZID local time, or floating. Windows/Exchange names ("Eastern Standard
+  // Time") resolve to IANA; unresolvable zones fall back to the user's tz.
+  const tz = resolveIcsTz(tzid) ?? USER_TIMEZONE;
   return { iso: toUtcIso(`${y}-${mo}-${d}T${h}:${mi}:${s}`, tz), allDay: false };
 }
 
@@ -116,13 +131,23 @@ export function parseIcs(text: string): ParsedEvent[] {
         cur.status = valueOf(line).toUpperCase();
         break;
       case "DTSTART": {
-        const r = parseDt(line);
-        cur.startIso = r.iso;
-        cur.allDay = r.allDay;
+        // A single unparseable event must never abort the whole feed — the
+        // missing startIso just drops this event at END:VEVENT.
+        try {
+          const r = parseDt(line);
+          cur.startIso = r.iso;
+          cur.allDay = r.allDay;
+        } catch {
+          cur.startIso = null;
+        }
         break;
       }
       case "DTEND": {
-        cur.endIso = parseDt(line).iso;
+        try {
+          cur.endIso = parseDt(line).iso;
+        } catch {
+          cur.endIso = null;
+        }
         break;
       }
       default:
