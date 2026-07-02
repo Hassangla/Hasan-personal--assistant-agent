@@ -116,12 +116,17 @@ export async function syncSource(src: Source): Promise<number> {
   // whose events all fall outside the import window.
   let status = `ok · ${count} events`;
   if (count === 0) {
-    status =
-      rawVeventCount === 0
-        ? "ok · feed is valid but empty — new Outlook links can take a while to fill"
-        : events.length === 0
-          ? `found ${rawVeventCount} events but none were parseable`
-          : `ok · ${rawVeventCount} events in feed, none in the sync window`;
+    if (rawVeventCount === 0) {
+      status = "ok · feed is valid but empty — new Outlook links can take a while to fill";
+    } else if (events.length === 0) {
+      status = `found ${rawVeventCount} events but none were parseable`;
+    } else {
+      // Show the feed's own date range so "all in the past" is self-evident.
+      const times = events.map((e) => new Date(e.startIso).getTime()).filter((t) => !Number.isNaN(t));
+      const day = (t: number) => new Date(t).toISOString().slice(0, 10);
+      const range = times.length ? ` (${day(Math.min(...times))} → ${day(Math.max(...times))})` : "";
+      status = `ok · ${rawVeventCount} events${range}, none upcoming`;
+    }
   }
   await markSource(src.id, status);
   return count;

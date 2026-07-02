@@ -353,12 +353,15 @@ export function parseIcs(
 
   const events: ParsedEvent[] = [];
   for (const e of raw) {
+    // Outlook "cancels" meetings by renaming them ("Canceled: Weekly sync")
+    // while often leaving STATUS untouched in the published feed.
+    const cancelled = e.cancelled || /^cancell?ed:\s/i.test(e.title);
     const common = {
       title: e.title,
       location: e.location,
       description: e.description,
       allDay: e.allDay,
-      cancelled: e.cancelled,
+      cancelled,
     };
 
     if (e.recurrenceIdIso) {
@@ -383,7 +386,6 @@ export function parseIcs(
             startIso: occIso,
             endIso: durMs != null && durMs >= 0 ? new Date(Date.parse(occIso) + durMs).toISOString() : null,
             ...common,
-            cancelled: false,
           });
         }
       } catch {
