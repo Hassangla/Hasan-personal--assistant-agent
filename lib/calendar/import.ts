@@ -122,6 +122,31 @@ export async function importDueSources(userId: string): Promise<{ sources: numbe
   return { sources: n, imported };
 }
 
+export type CalSource = { id: string; label: string | null; url: string; lastStatus: string | null };
+
+// Linked ICS/webcal subscriptions, for display + management on the Calendar page.
+export async function listCalendarSources(userId: string): Promise<CalSource[]> {
+  const { data } = await supabaseAdmin()
+    .from("calendar_sources")
+    .select("id,label,url,last_status,created_at")
+    .eq("user_id", userId)
+    .eq("active", true)
+    .order("created_at", { ascending: true });
+  return ((data ?? []) as any[]).map((s) => ({
+    id: s.id,
+    label: s.label ?? null,
+    url: s.url,
+    lastStatus: s.last_status ?? null,
+  }));
+}
+
+// Unlink one ICS source: deactivate it and drop the events it imported.
+export async function removeCalendarSource(userId: string, id: string): Promise<void> {
+  const sb = supabaseAdmin();
+  await sb.from("meetings").delete().eq("user_id", userId).like("external_uid", `${id}:%`);
+  await sb.from("calendar_sources").update({ active: false }).eq("user_id", userId).eq("id", id);
+}
+
 // Register a source (dedup by URL) and do an initial sync.
 export async function addCalendarSource(
   userId: string,

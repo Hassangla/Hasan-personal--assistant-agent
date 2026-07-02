@@ -1,15 +1,24 @@
 import { NextResponse } from "next/server";
 import { USER_ID } from "@/lib/config";
-import { addCalendarSource } from "@/lib/calendar/import";
+import { addCalendarSource, removeCalendarSource } from "@/lib/calendar/import";
 
-// Register an external calendar (Apple/Google published .ics/webcal URL) and do
-// an initial import. Auth is enforced by middleware (session cookie) — this path
-// is deliberately NOT under the public /api/calendar feed prefix.
+// Register (or unlink) an external calendar published as an .ics/webcal URL —
+// Google secret iCal, Outlook publish link, Proton share link, .edu feeds, etc.
+// Auth is enforced by middleware (session cookie); deliberately NOT under the
+// public /api/calendar feed prefix.
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
+
+  if (body.disconnect) {
+    const id = typeof body.id === "string" ? body.id.trim() : "";
+    if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+    await removeCalendarSource(USER_ID, id);
+    return NextResponse.json({ ok: true, disconnected: true });
+  }
+
   const url = typeof body.url === "string" ? body.url.trim() : "";
   const label = typeof body.label === "string" ? body.label.trim() : "";
   if (!url) {

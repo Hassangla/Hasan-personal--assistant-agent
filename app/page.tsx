@@ -162,9 +162,63 @@ export default async function Dashboard() {
 
           {/* RIGHT COLUMN */}
           <div className="flex flex-col gap-6">
+            {/* TODAY AGENDA — events happening today + tasks due today */}
+            <Card className="px-5 pb-4 pt-6 sm:px-6">
+              <div className="mb-1 flex items-baseline justify-between">
+                <div className="flex items-baseline gap-2.5">
+                  <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">03</span>
+                  <h3 className="m-0 font-display text-[17px] font-bold tracking-[-0.01em] text-ink">Today</h3>
+                  <span className="font-mono text-[11px] text-ink3">{d.todayLabel}</span>
+                </div>
+                <Link href="/calendar" className="font-mono text-[11px] text-accent no-underline hover:underline">
+                  calendar →
+                </Link>
+              </div>
+              <div className="mt-2">
+                {d.todayAgenda.length ? (
+                  d.todayAgenda.map((it) => {
+                    const dot = it.overdue ? "#C04A2E" : it.kind === "event" ? "#3C6FB0" : "#BC8638";
+                    const row = (
+                      <>
+                        <span
+                          className="w-[58px] shrink-0 text-right font-mono text-[11px]"
+                          style={{ color: it.overdue ? "#C04A2E" : "#8A8069" }}
+                        >
+                          {it.timeText}
+                        </span>
+                        <span style={{ background: dot }} className="h-1.5 w-1.5 shrink-0 rounded-full" />
+                        <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-inkstrong">
+                          {it.kind === "event" ? "🗓 " : ""}
+                          {it.title}
+                        </span>
+                      </>
+                    );
+                    return it.kind === "task" ? (
+                      <Link
+                        key={it.id}
+                        href={`/?task=${it.id}`}
+                        title="Open task details"
+                        className="-mx-1.5 flex items-center gap-2.5 rounded-[8px] border-t border-line2 px-1.5 py-2 no-underline first:border-t-0 hover:bg-cardalt"
+                      >
+                        {row}
+                      </Link>
+                    ) : (
+                      <div key={it.id} className="flex items-center gap-2.5 border-t border-line2 py-2 first:border-t-0">
+                        {row}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="py-4 text-center text-[13px] text-ink3">
+                    Nothing scheduled today. <Link href="/calendar" className="text-accent no-underline hover:underline">Link a calendar →</Link>
+                  </p>
+                )}
+              </div>
+            </Card>
+
             {/* LIFE AREAS */}
             <Card className="px-5 pb-3.5 pt-6 sm:px-6">
-              <SectionHeader index="03" title="Life areas" meta="7" />
+              <SectionHeader index="04" title="Life areas" meta="7" />
               <div className="mt-3 grid grid-cols-2 gap-2.5">
                 {d.areas.map((a) => (
                   <Link
@@ -201,7 +255,7 @@ export default async function Dashboard() {
 
             {/* HEARTBEAT */}
             <Card className="px-5 pb-[18px] pt-6 sm:px-6">
-              <SectionHeader index="04" title="Heartbeat" meta="per-minute" />
+              <SectionHeader index="05" title="Heartbeat" meta="per-minute" />
               <div className="mt-3.5">
                 {d.heartbeat.map((h, i) => (
                   <div key={i} className="flex items-start gap-[13px] py-[7px]">
@@ -226,7 +280,7 @@ export default async function Dashboard() {
         {/* I'M CHASING (delegated) */}
         <div className="mt-9">
           <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">05</span>
+            <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">06</span>
             <h2 className="m-0 font-display text-[21px] font-bold tracking-[-0.01em] text-ink">I'm Chasing</h2>
             <span className="hidden text-[13px] text-ink3 sm:inline">— delegated work; I chase them until you confirm it's done</span>
           </div>
@@ -250,7 +304,7 @@ export default async function Dashboard() {
         {/* INBOX + PEOPLE */}
         <div className="mt-9 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
           <Card className="px-5 py-6 sm:px-7">
-            <SectionHeader index="06" title="Inbox" note="— triaged, awaiting your OK" />
+            <SectionHeader index="07" title="Inbox" note="— triaged, awaiting your OK" />
             <div className="my-3.5 flex items-center gap-[7px] rounded-[8px] bg-[#E9F3EC] px-[11px] py-[7px] text-[12px] text-good">
               <span className="h-1.5 w-1.5 rounded-full bg-good" />
               I summarize and draft, but never send without your confirmation.
@@ -282,7 +336,7 @@ export default async function Dashboard() {
           </Card>
 
           <Card className="px-5 pb-4 pt-6 sm:px-[26px]">
-            <SectionHeader index="07" title="People" />
+            <SectionHeader index="08" title="People" />
             <div className="mb-1.5 mt-1 text-[12px] text-ink3">Profiles I build quietly from your emails & chats.</div>
             {d.people.length ? (
               d.people.map((p) => (
