@@ -151,6 +151,16 @@ export async function pushFromReminders(userId: string, body: any): Promise<Remi
   const key = typeof body?.key === "string" ? body.key.trim() : "";
   if (!title) return { ok: false, error: "title required" };
   if (!key) return { ok: false, error: "key required (reminder creation date)" };
+  // The classic Shortcuts trap: typed placeholder words instead of the blue
+  // variable token. Reject loudly so the Shortcut's own output says what's
+  // wrong instead of silently creating a junk task.
+  const LITERAL = /^(repeat item|repeat item name|repeat item creation date|name|creation date|date created|due date)$/i;
+  if (LITERAL.test(title)) {
+    return { ok: false, error: `title is the literal text "${title}" — insert the blue Repeat Item variable, not typed words` };
+  }
+  if (LITERAL.test(key)) {
+    return { ok: false, error: `key is the literal text "${key}" — insert the Repeat Item ▸ Creation Date variable, not typed words` };
+  }
   if (MARKER.test(String(body?.notes ?? ""))) return { ok: true, noop: true }; // platform-born, never echo
 
   const { data: existing } = await sb
