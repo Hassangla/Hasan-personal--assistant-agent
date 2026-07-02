@@ -1,4 +1,4 @@
-import { USER_ID } from "@/lib/config";
+import { USER_ID, USER_TIMEZONE } from "@/lib/config";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { calendarTokenValid } from "@/lib/calendar";
 
@@ -11,6 +11,24 @@ export const dynamic = "force-dynamic";
 function icsTime(iso: string): string {
   // → YYYYMMDDTHHMMSSZ (UTC)
   return new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+// The task's due wall-clock in the user's tz — 23:59/00:00 means "date-only".
+function tzHM(iso: string): { date: string; hm: string } {
+  const d = new Date(iso);
+  const date = new Intl.DateTimeFormat("en-CA", {
+    timeZone: USER_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+  const hm = new Intl.DateTimeFormat("en-GB", {
+    timeZone: USER_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+  return { date, hm };
 }
 
 function esc(s: unknown): string {
@@ -44,15 +62,27 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
 
   const sb = supabaseAdmin();
   const since = new Date(Date.now() - 60 * 86400000).toISOString();
-  const { data: rows } = await sb
-    .from("meetings")
-    .select("id, title, location, notes, starts_at, ends_at, remind_minutes_before, status, updated_at")
-    .eq("user_id", USER_ID)
-    .eq("external_source", "agent") // only export agent-created events (don't echo imported ones back)
-    .in("status", ["scheduled", "done"])
-    .gte("starts_at", since)
-    .order("starts_at", { ascending: true })
-    .limit(1000);
+  const [{ data: rows }, { data: taskRows }] = await Promise.all([
+    sb
+      .from("meetings")
+      .select("id, title, location, notes, starts_at, ends_at, remind_minutes_before, status, updated_at")
+      .eq("user_id", USER_ID)
+      .eq("external_source", "agent") // only export agent-created events (don't echo imported ones back)
+      .in("status", ["scheduled", "done"])
+      .gte("starts_at", since)
+      .order("starts_at", { ascending: true })
+      .limit(1000),
+    // Dated open tasks show as deadline markers on the subscribed calendar.
+    sb
+      .from("tasks")
+      .select("id, title, due_at")
+      .eq("user_id", USER_ID)
+      .in("status", ["open", "reminded", "escalated", "snoozed"])
+      .not("due_at", "is", null)
+      .gte("due_at", since)
+      .order("due_at", { ascending: true })
+      .limit(500),
+  ]);
 
   const now = icsTime(new Date().toISOString());
   const lines: string[] = [
@@ -85,6 +115,32 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     lines.push("ACTION:DISPLAY");
     lines.push("DESCRIPTION:Reminder");
     lines.push(`TRIGGER:-PT${lead}M`);
+    lines.push("END:VALARM");
+    lines.push("END:VEVENT");
+  }
+
+  // Task deadlines: timed dues become a 30-min "Due:" block ending at the
+  // deadline moment; date-only dues (23:59 local convention) become all-day.
+  for (const t of (taskRows ?? []) as any[]) {
+    const { date, hm } = tzHM(t.due_at);
+    lines.push("BEGIN:VEVENT");
+    lines.push(`UID:task-${t.id}@personal-agent`);
+    lines.push(`DTSTAMP:${now}`);
+    if (hm === "23:59" || hm === "00:00") {
+      const day = date.replace(/-/g, "");
+      const next = new Date(Date.parse(date + "T00:00:00Z") + 86400000).toISOString().slice(0, 10).replace(/-/g, "");
+      lines.push(`DTSTART;VALUE=DATE:${day}`);
+      lines.push(`DTEND;VALUE=DATE:${next}`);
+    } else {
+      lines.push(`DTSTART:${icsTime(new Date(new Date(t.due_at).getTime() - 30 * 60000).toISOString())}`);
+      lines.push(`DTEND:${icsTime(t.due_at)}`);
+    }
+    lines.push(`SUMMARY:${esc(`Due: ${t.title}`)}`);
+    lines.push("STATUS:CONFIRMED");
+    lines.push("BEGIN:VALARM");
+    lines.push("ACTION:DISPLAY");
+    lines.push("DESCRIPTION:Task due");
+    lines.push("TRIGGER:-PT60M");
     lines.push("END:VALARM");
     lines.push("END:VEVENT");
   }

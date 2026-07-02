@@ -1,8 +1,10 @@
 import { headers } from "next/headers";
 import { getCalendarData, type CalMeeting } from "@/lib/dashboard/calendar";
 import { USER_TIMEZONE } from "@/lib/config";
+import { remindersPullPath, remindersPushPath } from "@/lib/reminders";
 import { Header } from "@/components/app/Header";
 import { CalendarSync } from "@/components/app/CalendarSync";
+import { RemindersSync } from "@/components/app/RemindersSync";
 import { Card, SectionHeader, AreaTag } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +28,8 @@ export default async function CalendarPage() {
   const host = (await headers()).get("host") ?? "";
   const calHttps = `https://${host}${d.calendarFeedPath}`;
   const calWebcal = `webcal://${host}${d.calendarFeedPath}`;
+  const remPull = `https://${host}${remindersPullPath()}`;
+  const remPush = `https://${host}${remindersPushPath()}`;
 
   return (
     <div className="min-h-screen pb-[72px]">
@@ -67,10 +71,16 @@ export default async function CalendarPage() {
           />
         </Card>
 
+        {/* APPLE REMINDERS — two-way */}
+        <Card className="mt-6 px-5 pb-5 pt-6 sm:px-7">
+          <SectionHeader index="03" title="Apple Reminders" size={20} note="— two-way task sync" />
+          <RemindersSync pullUrl={remPull} pushUrl={remPush} />
+        </Card>
+
         {/* PAST */}
         {d.past.length > 0 && (
           <Card className="mt-6 px-5 pb-4 pt-6 sm:px-7">
-            <SectionHeader index="03" title="Past" size={20} meta={`${d.past.length}`} />
+            <SectionHeader index="04" title="Past" size={20} meta={`${d.past.length}`} />
             <div className="mt-2 opacity-80">
               {d.past.map((m) => (
                 <MeetingRow key={m.id} m={m} />

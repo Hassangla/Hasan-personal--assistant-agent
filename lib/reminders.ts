@@ -1,0 +1,166 @@
+import "server-only";
+import crypto from "node:crypto";
+import { USER_ID } from "@/lib/config";
+import { supabaseAdmin } from "@/lib/supabase/server";
+import { executeTool } from "@/lib/agent/execute";
+import { toUtcIso } from "@/lib/time";
+
+// Two-way Apple Reminders sync, driven by an iOS Shortcut that calls two
+// token-authed endpoints on a schedule (Apple exposes no server API for
+// Reminders, so the phone is the bridge):
+//   pull — platform tasks the Shortcut should create as reminders (notes carry
+//          a "pa:<task id>" marker), plus markers whose reminders it should
+//          remove because the task was completed/deleted here.
+//   push — reminders the user created on their phone (keyed by the reminder's
+//          creation date, stable across renames) → created as real tasks with
+//          the same follow-up logic as chat-created ones; also completions of
+//          "pa:" reminders → complete the matching task.
+
+const OPEN = ["open", "reminded", "escalated", "snoozed"];
+
+export function remindersToken(userId: string = USER_ID): string {
+  const secret = process.env.AUTH_SECRET || "";
+  return crypto.createHmac("sha256", secret).update(`reminders:${userId}`).digest("hex").slice(0, 40);
+}
+
+export function remindersTokenValid(token: string, userId: string = USER_ID): boolean {
+  const expected = remindersToken(userId);
+  if (token.length !== expected.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
+
+export function remindersPullPath(userId: string = USER_ID): string {
+  return `/api/reminders/${remindersToken(userId)}/pull`;
+}
+export function remindersPushPath(userId: string = USER_ID): string {
+  return `/api/reminders/${remindersToken(userId)}/push`;
+}
+
+export type RemindersPull = {
+  add: { id: string; title: string; due: string; notes: string }[];
+  remove: string[]; // "pa:<id>" markers whose reminders should be deleted
+};
+
+// dry=true previews without consuming state (used by verification).
+export async function pullForReminders(userId: string, dry = false): Promise<RemindersPull> {
+  const sb = supabaseAdmin();
+
+  const [addRes, removeRes] = await Promise.all([
+    sb
+      .from("tasks")
+      .select("id,title,due_at")
+      .eq("user_id", userId)
+      .in("status", OPEN)
+      .is("delegated_to", null)
+      .is("reminders_exported_at", null)
+      .order("created_at", { ascending: true })
+      .limit(50),
+    sb
+      .from("tasks")
+      .select("id")
+      .eq("user_id", userId)
+      .in("status", ["done", "dropped"])
+      .not("reminders_exported_at", "is", null)
+      .is("reminders_removed_at", null)
+      .limit(50),
+  ]);
+
+  const add = ((addRes.data ?? []) as any[]).map((t) => ({
+    id: t.id as string,
+    title: t.title as string,
+    due: (t.due_at as string) ?? "",
+    notes: `pa:${t.id}`,
+  }));
+  const remove = ((removeRes.data ?? []) as any[]).map((t) => `pa:${t.id}`);
+
+  if (!dry) {
+    const now = new Date().toISOString();
+    if (add.length) {
+      await sb
+        .from("tasks")
+        .update({ reminders_exported_at: now })
+        .eq("user_id", userId)
+        .in("id", add.map((t) => t.id));
+    }
+    if (remove.length) {
+      await sb
+        .from("tasks")
+        .update({ reminders_removed_at: now })
+        .eq("user_id", userId)
+        .in("id", removeRes.data!.map((t: any) => t.id));
+    }
+  }
+
+  return { add, remove };
+}
+
+const MARKER = /pa:([0-9a-f-]{36})/i;
+
+export type RemindersPush =
+  | { ok: true; created: string }
+  | { ok: true; completed: string }
+  | { ok: true; dup: true }
+  | { ok: true; noop: true }
+  | { ok: false; error: string };
+
+export async function pushFromReminders(userId: string, body: any): Promise<RemindersPush> {
+  const sb = supabaseAdmin();
+
+  // Completion of a platform-born reminder: notes carry the pa:<id> marker.
+  if (body?.completed === true || body?.completed === "true") {
+    const marker = String(body?.notes ?? body?.marker ?? "");
+    const m = marker.match(MARKER);
+    if (!m) return { ok: true, noop: true }; // completed something we don't track
+    const { data: t } = await sb
+      .from("tasks")
+      .select("id,status")
+      .eq("user_id", userId)
+      .eq("id", m[1]!)
+      .maybeSingle();
+    if (!t || !OPEN.includes(t.status)) return { ok: true, noop: true };
+    await sb
+      .from("tasks")
+      .update({ status: "done", completed_at: new Date().toISOString() })
+      .eq("id", t.id)
+      .eq("user_id", userId);
+    return { ok: true, completed: t.id };
+  }
+
+  // New reminder created on the phone → create a real task (once).
+  const title = typeof body?.title === "string" ? body.title.trim() : "";
+  const key = typeof body?.key === "string" ? body.key.trim() : "";
+  if (!title) return { ok: false, error: "title required" };
+  if (!key) return { ok: false, error: "key required (reminder creation date)" };
+  if (MARKER.test(String(body?.notes ?? ""))) return { ok: true, noop: true }; // platform-born, never echo
+
+  const { data: existing } = await sb
+    .from("tasks")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("reminders_key", key)
+    .maybeSingle();
+  if (existing) return { ok: true, dup: true };
+
+  const dueIso = toUtcIso(typeof body?.due === "string" && body.due.trim() ? body.due.trim() : null);
+  const created = (await executeTool(
+    "create_task",
+    { title, due_at: dueIso ?? undefined },
+    { userId },
+  )) as Record<string, unknown>;
+  if (!created || typeof created !== "object" || !created.id || "error" in created) {
+    return { ok: false, error: String((created as any)?.error ?? "could not create task") };
+  }
+
+  // Already lives in Reminders — mark exported so pull never echoes it back.
+  await sb
+    .from("tasks")
+    .update({ reminders_key: key, reminders_exported_at: new Date().toISOString() })
+    .eq("id", created.id as string)
+    .eq("user_id", userId);
+
+  return { ok: true, created: created.id as string };
+}
