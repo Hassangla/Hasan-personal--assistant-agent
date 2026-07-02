@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
+import { TaskDetailPanel } from "@/components/app/TaskDetailPanel";
 
 export const metadata: Metadata = {
   title: "Personal Agent",
@@ -15,6 +17,9 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-page font-sans text-ink antialiased">
         {children}
+        <Suspense fallback={null}>
+          <TaskDetailPanel />
+        </Suspense>
       </body>
     </html>
   );

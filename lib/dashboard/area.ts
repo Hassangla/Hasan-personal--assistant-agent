@@ -4,7 +4,7 @@ import { USER_ID } from "@/lib/config";
 import { areaBySlug, type AreaMeta } from "@/lib/areas";
 import { taskState, type TaskState } from "@/lib/dashboard/queries";
 
-export type AreaTaskRow = { id: string; title: string; state: TaskState };
+export type AreaTaskRow = { id: string; title: string; state: TaskState; dueIso: string | null };
 export type AreaPerson = { id: string; name: string; role: string };
 export type AreaEmail = { id: string; from: string; subject: string; summary: string | null };
 export type AreaData = {
@@ -60,7 +60,12 @@ export async function getAreaData(slug: string): Promise<AreaData | null> {
   const taskRows = (taskRes.data ?? []) as any[];
   const emailRows = (emailRes.data ?? []) as any[];
 
-  const tasks: AreaTaskRow[] = taskRows.map((t) => ({ id: t.id, title: t.title, state: taskState(t) }));
+  const tasks: AreaTaskRow[] = taskRows.map((t) => ({
+    id: t.id,
+    title: t.title,
+    state: taskState(t),
+    dueIso: t.due_at ?? null,
+  }));
 
   // People linked to this area through one of its tasks or emails.
   const personIds = new Set<string>();

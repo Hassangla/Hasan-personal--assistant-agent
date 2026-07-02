@@ -62,6 +62,7 @@ export default async function AreaPage({ params }: { params: Promise<{ slug: str
                   title={t.title}
                   layout="area"
                   state={{ color: t.state.color, label: t.state.label }}
+                  dueIso={t.dueIso}
                 />
               ))
             ) : (
