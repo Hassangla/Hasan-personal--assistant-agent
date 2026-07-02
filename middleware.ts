@@ -10,6 +10,7 @@ const PUBLIC_PREFIXES = [
   "/api/email", // verifies its own push token (Part 4)
   "/api/agent/tick", // verifies CRON_SECRET
   "/api/calendar", // .ics subscription feed — the URL token is the credential
+  "/api/reminders", // Apple Reminders shortcut sync — URL token is the credential
 ];
 
 export async function middleware(req: NextRequest) {

@@ -153,6 +153,7 @@ async function syncAccount(acct: Account): Promise<number> {
     }
     for (const ics of datas) {
       for (const ev of parseIcs(ics)) {
+        if (/@personal-agent(#|$)/.test(ev.uid)) continue; // de-echo our own feed
         const startMs = new Date(ev.startIso).getTime();
         if (Number.isNaN(startMs) || startMs < now - PAST || startMs > now + FUTURE) continue;
         const extUid = `caldav:${acct.id}:${ev.uid}`;

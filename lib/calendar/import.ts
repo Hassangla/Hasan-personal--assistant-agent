@@ -58,6 +58,9 @@ export async function syncSource(src: Source): Promise<number> {
   let count = 0;
 
   for (const ev of events) {
+    // De-echo: never re-import the agent's own feed items (a user may have
+    // subscribed Google/Apple to our feed and then linked that calendar here).
+    if (/@personal-agent(#|$)/.test(ev.uid)) continue;
     const startMs = new Date(ev.startIso).getTime();
     if (Number.isNaN(startMs) || startMs < now - PAST_WINDOW || startMs > now + FUTURE_WINDOW) continue;
     const extUid = `${src.id}:${ev.uid}`;
