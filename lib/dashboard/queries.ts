@@ -216,8 +216,9 @@ export async function getDashboardData(): Promise<DashboardData> {
   const own = tasks.filter((t) => !t.delegated_to);
   const delegated = tasks.filter((t) => t.delegated_to);
 
-  // Today: the user's own open priorities.
-  const today: TodayTask[] = own.slice(0, 15).map((t, i) => ({
+  // Today: ALL the user's own open priorities — the To-Do list paginates
+  // client-side (15/page), so nothing is invisible past a slice.
+  const today: TodayTask[] = own.map((t, i) => ({
     id: t.id,
     title: t.title,
     area: areaNameOf(t.area_id),

@@ -3,6 +3,7 @@ import { USER_TIMEZONE } from "@/lib/config";
 import { Header } from "@/components/app/Header";
 import { Clock } from "@/components/app/Clock";
 import { CaptureBar } from "@/components/app/CaptureBar";
+import { TodoList } from "@/components/app/TodoList";
 import { TaskItem } from "@/components/app/TaskItem";
 import { AddTask } from "@/components/app/AddTask";
 import { Card, SectionHeader, Eyebrow, AreaTag, Avatar } from "@/components/app/ui";
@@ -140,19 +141,7 @@ export default async function Dashboard() {
             <SectionHeader index="02" title="To-Do" note="— your tasks" meta={`${d.today.length}`} />
             <div className="mt-1.5">
               {d.today.length ? (
-                d.today.map((t) => (
-                  <TaskItem
-                    key={t.id}
-                    id={t.id}
-                    title={t.title}
-                    variant="todo"
-                    badge={t.priority}
-                    area={t.area}
-                    state={{ color: t.state.color, label: t.state.label }}
-                    dueIso={t.dueIso}
-                    goalTitle={t.goalTitle}
-                  />
-                ))
+                <TodoList tasks={d.today} />
               ) : (
                 <p className="py-6 text-center text-[14px] text-ink3">All clear — add a task below or capture one above.</p>
               )}
