@@ -162,6 +162,46 @@ export function RemindersSync({ pullUrl, pushUrl }: { pullUrl: string; pushUrl: 
 
       <details className="rounded-[12px] border border-line2 bg-cardalt px-3.5 py-3">
         <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">
+          🧹 Completions: platform → phone (optional)
+        </summary>
+        <div className="mt-2.5 space-y-1.5">
+          <p className="m-0 text-[12px] leading-normal text-ink2">
+            Completing or deleting a task here queues its reminder for removal on the phone (Shortcuts can’t “check
+            off” a reminder — Apple only allows removal). Add this after the pull loop’s <b>End Repeat</b>, before{" "}
+            <b>Run Shortcut</b>:
+          </p>
+          <p className={step}>
+            <span className={num}>1.</span>
+            <span>
+              <b>Get Dictionary Value</b> → key <span className={kbd}>remove</span> from <i>Contents of URL</i> (the
+              same one from step 3 of the build).
+            </span>
+          </p>
+          <p className={step}>
+            <span className={num}>2.</span>
+            <span>
+              <b>Repeat with Each</b> (uses that list). Inside: <b>Get Dictionary Value</b> → key{" "}
+              <span className={kbd}>title</span> from <i>Repeat Item</i>.
+            </span>
+          </p>
+          <p className={step}>
+            <span className={num}>3.</span>
+            <span>
+              <b>Find Reminders</b> where <b>Name is</b> that Dictionary Value and <b>Is Not Completed</b> (no list
+              filter — it should clean both lists).
+            </span>
+          </p>
+          <p className={step}>
+            <span className={num}>4.</span>
+            <span>
+              <b>Remove Reminders</b> → the reminders from that Find. Then <b>End Repeat</b>.
+            </span>
+          </p>
+        </div>
+      </details>
+
+      <details className="rounded-[12px] border border-line2 bg-cardalt px-3.5 py-3">
+        <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">
           ⚙️ Make it automatic
         </summary>
         <div className="mt-2.5 space-y-1.5">

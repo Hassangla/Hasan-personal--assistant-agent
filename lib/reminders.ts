@@ -42,7 +42,11 @@ export function remindersPushPath(userId: string = USER_ID): string {
 
 export type RemindersPull = {
   add: { id: string; title: string; due: string; notes: string }[];
-  remove: string[]; // "pa:<id>" markers whose reminders should be deleted
+  // Tasks completed/deleted on the platform whose reminders should be removed
+  // on the phone. title lets the Shortcut match by name (reminders don't
+  // reliably carry the pa: marker in notes); marker kept for marker-based
+  // setups.
+  remove: { marker: string; title: string }[];
 };
 
 // dry=true previews without consuming state (used by verification).
@@ -61,7 +65,7 @@ export async function pullForReminders(userId: string, dry = false): Promise<Rem
       .limit(50),
     sb
       .from("tasks")
-      .select("id")
+      .select("id,title")
       .eq("user_id", userId)
       .in("status", ["done", "dropped"])
       .not("reminders_exported_at", "is", null)
@@ -75,7 +79,7 @@ export async function pullForReminders(userId: string, dry = false): Promise<Rem
     due: (t.due_at as string) ?? "",
     notes: `pa:${t.id}`,
   }));
-  const remove = ((removeRes.data ?? []) as any[]).map((t) => `pa:${t.id}`);
+  const remove = ((removeRes.data ?? []) as any[]).map((t) => ({ marker: `pa:${t.id}`, title: t.title as string }));
 
   if (!dry) {
     const now = new Date().toISOString();
