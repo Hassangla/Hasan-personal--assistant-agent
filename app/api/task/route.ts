@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     .maybeSingle();
   if (!t) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const [areaRes, goalRes, goalsRes, reasonRes] = await Promise.all([
+  const [areaRes, goalRes, goalsRes, reasonRes, filesRes] = await Promise.all([
     t.area_id
       ? sb.from("entities").select("name").eq("id", t.area_id).maybeSingle()
       : Promise.resolve({ data: null as any }),
@@ -39,7 +39,22 @@ export async function GET(req: Request) {
       .eq("resource_id", id)
       .order("created_at", { ascending: false })
       .limit(1),
+    sb
+      .from("task_files")
+      .select("id,name,path,size_bytes,mime")
+      .eq("user_id", USER_ID)
+      .eq("task_id", id)
+      .order("created_at", { ascending: true })
+      .limit(30),
   ]);
+
+  // Short-lived signed URLs for the private bucket (1 hour).
+  const files = await Promise.all(
+    (((filesRes.data ?? []) as any[])).map(async (f) => {
+      const { data: signed } = await sb.storage.from("task-files").createSignedUrl(f.path, 3600);
+      return { id: f.id, name: f.name, size: Number(f.size_bytes) || 0, mime: f.mime ?? null, url: signed?.signedUrl ?? null };
+    }),
+  );
 
   return NextResponse.json({
     task: {
@@ -56,6 +71,7 @@ export async function GET(req: Request) {
       delegatedTo: t.delegated_to ?? null,
       nudgeCount: t.nudge_count ?? 0,
       lastReason: ((reasonRes.data ?? [])[0] as any)?.payload?.reason ?? null,
+      files,
     },
     goals: ((goalsRes.data ?? []) as any[]).map((g) => ({ id: g.id, title: g.title, horizon: g.horizon })),
   });
