@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     .maybeSingle();
   if (!t) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const [areaRes, goalRes, goalsRes, reasonRes, filesRes] = await Promise.all([
+  const [areaRes, goalRes, goalsRes, reasonRes, filesRes, checklistRes, areasAllRes] = await Promise.all([
     t.area_id
       ? sb.from("entities").select("name").eq("id", t.area_id).maybeSingle()
       : Promise.resolve({ data: null as any }),
@@ -46,7 +46,25 @@ export async function GET(req: Request) {
       .eq("task_id", id)
       .order("created_at", { ascending: true })
       .limit(30),
+    sb
+      .from("task_checklist_items")
+      .select("id,title,due_at,area_id,done")
+      .eq("user_id", USER_ID)
+      .eq("task_id", id)
+      .order("position", { ascending: true })
+      .limit(100),
+    sb.from("entities").select("id,name").eq("user_id", USER_ID).eq("kind", "area"),
   ]);
+
+  const areaNameById = new Map<string, string>();
+  for (const a of ((areasAllRes.data ?? []) as any[])) areaNameById.set(a.id, a.name);
+  const checklist = (((checklistRes.data ?? []) as any[])).map((c) => ({
+    id: c.id,
+    title: c.title,
+    dueIso: c.due_at ?? null,
+    area: c.area_id ? areaNameById.get(c.area_id) ?? null : null,
+    done: !!c.done,
+  }));
 
   // Short-lived signed URLs for the private bucket (1 hour).
   const files = await Promise.all(
@@ -72,6 +90,7 @@ export async function GET(req: Request) {
       nudgeCount: t.nudge_count ?? 0,
       lastReason: ((reasonRes.data ?? [])[0] as any)?.payload?.reason ?? null,
       files,
+      checklist,
     },
     goals: ((goalsRes.data ?? []) as any[]).map((g) => ({ id: g.id, title: g.title, horizon: g.horizon })),
   });

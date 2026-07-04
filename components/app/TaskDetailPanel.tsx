@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { areaMeta } from "@/lib/areas";
+import { areaMeta, AREA_META } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 
 type TaskFile = { id: string; name: string; size: number; mime: string | null; url: string | null };
+type ChecklistItem = { id: string; title: string; dueIso: string | null; area: string | null; done: boolean };
 type Detail = {
   id: string;
   title: string;
@@ -20,6 +21,7 @@ type Detail = {
   nudgeCount: number;
   lastReason: string | null;
   files?: TaskFile[];
+  checklist?: ChecklistItem[];
 };
 
 function fmtSize(bytes: number): string {
@@ -62,6 +64,34 @@ export function TaskDetailPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [fileMsg, setFileMsg] = useState<string | null>(null);
+  const [clTitle, setClTitle] = useState("");
+  const [clDue, setClDue] = useState("");
+  const [clArea, setClArea] = useState("");
+  const [clBusy, setClBusy] = useState(false);
+
+  async function checklistCall(payload: Record<string, unknown>) {
+    if (clBusy) return;
+    setClBusy(true);
+    try {
+      await fetch("/api/tasks/checklist", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      load();
+    } finally {
+      setClBusy(false);
+    }
+  }
+
+  async function addChecklistItem(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clTitle.trim() || !taskId) return;
+    await checklistCall({ action: "add", task_id: taskId, title: clTitle.trim(), due: clDue || "", area: clArea || "" });
+    setClTitle("");
+    setClDue("");
+    setClArea("");
+  }
 
   async function uploadFile(f: File) {
     if (!taskId || uploading) return;
@@ -281,6 +311,96 @@ export function TaskDetailPanel() {
                   <span className="text-[13px] text-ink2">{d.lastReason}</span>
                 </div>
               )}
+
+              <div>
+                <div className={label}>
+                  Checklist
+                  {(d.checklist ?? []).length > 0 && (
+                    <span className="ml-2 normal-case tracking-normal text-inkfaint">
+                      {(d.checklist ?? []).filter((c) => c.done).length}/{(d.checklist ?? []).length} done
+                    </span>
+                  )}
+                </div>
+                {(d.checklist ?? []).length > 0 && (
+                  <ul className="mb-2 space-y-1">
+                    {(d.checklist ?? []).map((c) => {
+                      const cm = c.area ? areaMeta(c.area) : null;
+                      return (
+                        <li key={c.id} className="flex items-center gap-2 text-[13px]">
+                          <button
+                            onClick={() => checklistCall({ action: "toggle", item_id: c.id })}
+                            disabled={clBusy}
+                            title={c.done ? "Mark not done" : "Mark done"}
+                            className={`flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold transition ${
+                              c.done ? "border-good bg-good text-white" : "border-[#CFC6B3] bg-transparent hover:border-good"
+                            }`}
+                          >
+                            {c.done ? "✓" : ""}
+                          </button>
+                          <span
+                            className="min-w-0 flex-1 truncate"
+                            style={c.done ? { color: "#A99F8C", textDecoration: "line-through" } : { color: "#322E27" }}
+                          >
+                            {c.title}
+                          </span>
+                          {cm && (
+                            <span
+                              style={{ color: cm.color, background: cm.color + "14" }}
+                              className="shrink-0 rounded-[6px] px-1.5 py-0.5 text-[10px] font-semibold"
+                            >
+                              {cm.label}
+                            </span>
+                          )}
+                          {!c.done && c.dueIso && <TaskTimer dueIso={c.dueIso} />}
+                          <button
+                            onClick={() => checklistCall({ action: "delete", item_id: c.id })}
+                            disabled={clBusy}
+                            title="Remove item"
+                            className="shrink-0 text-[12px] text-ink3 transition hover:text-danger disabled:opacity-50"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                <form onSubmit={addChecklistItem} className="flex flex-wrap items-center gap-1.5">
+                  <input
+                    value={clTitle}
+                    onChange={(e) => setClTitle(e.target.value)}
+                    placeholder="Checklist item…"
+                    className="min-w-0 flex-1 basis-full rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12.5px] text-ink outline-none sm:basis-auto"
+                  />
+                  <input
+                    type="datetime-local"
+                    value={clDue}
+                    onChange={(e) => setClDue(e.target.value)}
+                    title="Deadline (optional)"
+                    className="rounded-[8px] border border-line bg-card px-2 py-1.5 text-[11.5px] text-ink2 outline-none"
+                  />
+                  <select
+                    value={clArea}
+                    onChange={(e) => setClArea(e.target.value)}
+                    title="Label (optional)"
+                    className="rounded-[8px] border border-line bg-card px-2 py-1.5 text-[11.5px] text-ink2 outline-none"
+                  >
+                    <option value="">no label</option>
+                    {AREA_META.map((a) => (
+                      <option key={a.slug} value={a.canonical}>
+                        {a.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="submit"
+                    disabled={clBusy || !clTitle.trim()}
+                    className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+                  >
+                    {clBusy ? "…" : "Add"}
+                  </button>
+                </form>
+              </div>
 
               <div>
                 <div className={label}>Files</div>
