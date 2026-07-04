@@ -41,7 +41,7 @@ export function remindersPushPath(userId: string = USER_ID): string {
 }
 
 export type RemindersPull = {
-  add: { id: string; title: string; due: string; notes: string }[];
+  add: { id: string; title: string; due: string; notes: string; area: string }[];
   // Tasks completed/deleted on the platform whose reminders should be removed
   // on the phone. title lets the Shortcut match by name (reminders don't
   // reliably carry the pa: marker in notes); marker kept for marker-based
@@ -53,10 +53,10 @@ export type RemindersPull = {
 export async function pullForReminders(userId: string, dry = false): Promise<RemindersPull> {
   const sb = supabaseAdmin();
 
-  const [addRes, removeRes] = await Promise.all([
+  const [addRes, removeRes, areaRes] = await Promise.all([
     sb
       .from("tasks")
-      .select("id,title,due_at")
+      .select("id,title,due_at,area_id")
       .eq("user_id", userId)
       .in("status", OPEN)
       .is("delegated_to", null)
@@ -71,14 +71,24 @@ export async function pullForReminders(userId: string, dry = false): Promise<Rem
       .not("reminders_exported_at", "is", null)
       .is("reminders_removed_at", null)
       .limit(50),
+    sb.from("entities").select("id,name").eq("user_id", userId).eq("kind", "area"),
   ]);
 
-  const add = ((addRes.data ?? []) as any[]).map((t) => ({
-    id: t.id as string,
-    title: t.title as string,
-    due: (t.due_at as string) ?? "",
-    notes: `pa:${t.id}`,
-  }));
+  const areaById = new Map<string, string>();
+  for (const a of (areaRes.data ?? []) as any[]) areaById.set(a.id, a.name);
+
+  // Notes carry the pa: marker plus the area as a #tag so labels travel with
+  // the reminder (Reminders has no writable tag field via Shortcuts).
+  const add = ((addRes.data ?? []) as any[]).map((t) => {
+    const area = t.area_id ? areaById.get(t.area_id) ?? "" : "";
+    return {
+      id: t.id as string,
+      title: t.title as string,
+      due: (t.due_at as string) ?? "",
+      notes: `pa:${t.id}` + (area ? ` #${area.replace(/\s+/g, "-")}` : ""),
+      area,
+    };
+  });
   const remove = ((removeRes.data ?? []) as any[]).map((t) => ({ marker: `pa:${t.id}`, title: t.title as string }));
 
   if (!dry) {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 
+type TaskFile = { id: string; name: string; size: number; mime: string | null; url: string | null };
 type Detail = {
   id: string;
   title: string;
@@ -18,7 +19,14 @@ type Detail = {
   delegatedTo: string | null;
   nudgeCount: number;
   lastReason: string | null;
+  files?: TaskFile[];
 };
+
+function fmtSize(bytes: number): string {
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
 type Goal = { id: string; title: string; horizon: string };
 
 function fmtDate(iso: string | null): string {
@@ -51,6 +59,48 @@ export function TaskDetailPanel() {
   const [busy, setBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [fileMsg, setFileMsg] = useState<string | null>(null);
+
+  async function uploadFile(f: File) {
+    if (!taskId || uploading) return;
+    if (f.size > 4 * 1024 * 1024) {
+      setFileMsg("Too large — 4 MB max.");
+      return;
+    }
+    setUploading(true);
+    setFileMsg(null);
+    try {
+      const fd = new FormData();
+      fd.set("task_id", taskId);
+      fd.set("file", f);
+      const res = await fetch("/api/tasks/files", { method: "POST", body: fd });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) setFileMsg(j.error ?? "Upload failed.");
+      load();
+    } catch {
+      setFileMsg("Network error.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function deleteFile(fileId: string) {
+    if (uploading) return;
+    setUploading(true);
+    try {
+      await fetch("/api/tasks/files/delete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ file_id: fileId }),
+      });
+      load();
+    } finally {
+      setUploading(false);
+    }
+  }
 
   function load() {
     if (!taskId) return;
@@ -231,6 +281,58 @@ export function TaskDetailPanel() {
                   <span className="text-[13px] text-ink2">{d.lastReason}</span>
                 </div>
               )}
+
+              <div>
+                <div className={label}>Files</div>
+                {(d.files ?? []).length > 0 && (
+                  <ul className="mb-2 space-y-1">
+                    {(d.files ?? []).map((f) => (
+                      <li key={f.id} className="flex items-center gap-2 text-[13px]">
+                        <span className="shrink-0">📎</span>
+                        {f.url ? (
+                          <a
+                            href={f.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="min-w-0 flex-1 truncate text-accent underline"
+                          >
+                            {f.name}
+                          </a>
+                        ) : (
+                          <span className="min-w-0 flex-1 truncate text-ink2">{f.name}</span>
+                        )}
+                        <span className="shrink-0 font-mono text-[10px] text-inkfaint">{fmtSize(f.size)}</span>
+                        <button
+                          onClick={() => deleteFile(f.id)}
+                          disabled={uploading}
+                          title="Remove file"
+                          className="shrink-0 text-[12px] text-ink3 transition hover:text-danger disabled:opacity-50"
+                        >
+                          🗑
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadFile(f);
+                  }}
+                />
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32] disabled:opacity-50"
+                >
+                  {uploading ? "Working…" : "＋ Attach file"}
+                </button>
+                <span className="ml-2 font-mono text-[10px] text-inkfaint">4 MB max · stays on the platform</span>
+                {fileMsg && <p className="m-0 mt-1 text-[12px] text-danger">{fileMsg}</p>}
+              </div>
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line pt-4">
