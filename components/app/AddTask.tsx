@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AREA_META } from "@/lib/areas";
+import { toast } from "@/components/app/Toast";
 
 // Manually add a task to a section without the chat. The agent still applies
 // the same follow-up arming, reminders, and tracking (it routes through
@@ -32,6 +33,7 @@ export function AddTask({ variant }: { variant: "todo" | "delegated" }) {
         }),
       });
       if (!res.ok) throw new Error();
+      toast(variant === "delegated" ? "Delegated task added → chasing it" : "Task added ✓ — follow-up armed");
       setTitle("");
       setWho("");
       setArea("");

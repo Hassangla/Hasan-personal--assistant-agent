@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { areaMeta, AREA_META } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
+import { toast } from "@/components/app/Toast";
 
 type TaskFile = { id: string; name: string; size: number; mime: string | null; url: string | null };
 type ChecklistItem = { id: string; title: string; dueIso: string | null; area: string | null; done: boolean };
@@ -78,6 +79,8 @@ export function TaskDetailPanel() {
   const [clBusy, setClBusy] = useState(false);
   const [editingDue, setEditingDue] = useState(false);
   const [dueInput, setDueInput] = useState("");
+  const [panelDelegating, setPanelDelegating] = useState(false);
+  const [panelDelegateName, setPanelDelegateName] = useState("");
 
   async function saveDue(value: string) {
     if (!taskId || busy) return;
@@ -88,6 +91,7 @@ export function TaskDetailPanel() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ task_id: taskId, due: value }),
       });
+      toast(value ? "Deadline updated ⏰ — reminder follows shortly" : "Deadline cleared");
       setEditingDue(false);
       load();
       router.refresh();
@@ -99,6 +103,19 @@ export function TaskDetailPanel() {
   async function checklistCall(payload: Record<string, unknown>) {
     if (clBusy) return;
     setClBusy(true);
+    // Toggles feel instant: flip locally first, the reload just confirms.
+    if (payload.action === "toggle") {
+      setD((cur) =>
+        cur
+          ? {
+              ...cur,
+              checklist: (cur.checklist ?? []).map((c) =>
+                c.id === payload.item_id ? { ...c, done: !c.done } : c,
+              ),
+            }
+          : cur,
+      );
+    }
     try {
       await fetch("/api/tasks/checklist", {
         method: "POST",
@@ -135,6 +152,7 @@ export function TaskDetailPanel() {
       const res = await fetch("/api/tasks/files", { method: "POST", body: fd });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) setFileMsg(j.error ?? "Upload failed.");
+      else toast("File attached 📎");
       load();
     } catch {
       setFileMsg("Network error.");
@@ -192,6 +210,21 @@ export function TaskDetailPanel() {
     return () => clearInterval(t);
   }, []);
 
+  // Friendly slide-over behavior: Esc closes, the page behind stops scrolling.
+  useEffect(() => {
+    if (!taskId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") router.push(pathname);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [taskId, pathname, router]);
+
   if (!taskId) return null;
 
   const close = () => router.push(pathname);
@@ -205,28 +238,36 @@ export function TaskDetailPanel() {
   }
   async function complete() {
     await post("/api/tasks/complete", { task_id: taskId });
+    toast("Task completed ✓");
     router.push(pathname);
     router.refresh();
   }
   async function del() {
     await post("/api/tasks/delete", { task_id: taskId });
+    toast("Task deleted");
     router.push(pathname);
     router.refresh();
   }
-  async function delegate() {
-    const p = window.prompt("Delegate to whom?");
-    if (!p || !p.trim()) return;
-    await post("/api/tasks/delegate", { task_id: taskId, person: p.trim() });
+  async function submitPanelDelegate(e: React.FormEvent) {
+    e.preventDefault();
+    const p = panelDelegateName.trim();
+    if (!p) return;
+    await post("/api/tasks/delegate", { task_id: taskId, person: p });
+    toast(`Delegated to ${p} → I'm chasing it for you`);
+    setPanelDelegating(false);
+    setPanelDelegateName("");
     load();
     router.refresh();
   }
   async function takeBack() {
     await post("/api/tasks/delegate", { task_id: taskId, takeBack: true });
+    toast("Back in your To-Do ↩");
     load();
     router.refresh();
   }
   async function setGoal(gid: string) {
     await post("/api/tasks/link-goal", { task_id: taskId, goal_id: gid });
+    toast(gid ? "Linked to goal 🎯" : "Unlinked from goal");
     load();
     router.refresh();
   }
@@ -542,9 +583,30 @@ export function TaskDetailPanel() {
                 >
                   ↩ Take back
                 </button>
+              ) : panelDelegating ? (
+                <form onSubmit={submitPanelDelegate} className="flex items-center gap-1.5">
+                  <input
+                    value={panelDelegateName}
+                    onChange={(e) => setPanelDelegateName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Escape" && setPanelDelegating(false)}
+                    placeholder="to whom?"
+                    autoFocus
+                    className="w-[120px] rounded-[8px] border border-line bg-card px-2.5 py-2 text-[13px] text-ink outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={busy || !panelDelegateName.trim()}
+                    className="rounded-[9px] bg-accent px-3 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                  >
+                    →
+                  </button>
+                  <button type="button" onClick={() => setPanelDelegating(false)} className="px-1 text-[14px] text-ink3">
+                    ✕
+                  </button>
+                </form>
               ) : (
                 <button
-                  onClick={delegate}
+                  onClick={() => setPanelDelegating(true)}
                   disabled={busy}
                   className="rounded-[9px] border border-line bg-card px-3.5 py-2 text-[13px] font-semibold text-ink2 disabled:opacity-50"
                 >

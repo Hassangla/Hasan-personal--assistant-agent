@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Clock } from "./Clock";
+import { MobileNav } from "./MobileNav";
 
 // Sticky top bar shared by every screen: agent mark + nav (with the live
 // Approvals count) + date · clock · ONLINE. On phones the brand name and the
@@ -44,7 +45,7 @@ export function Header({
           </span>
         </Link>
 
-        <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
+        <nav className="hidden min-w-0 items-center gap-0.5 overflow-x-auto md:flex">
           {nav.map((n) => {
             const on = n.key === active;
             const badge = n.key === "approvals" ? pendingCount : 0;
@@ -78,7 +79,13 @@ export function Header({
             ONLINE
           </span>
         </div>
+
+        {/* On phones the clock cluster is hidden — show a compact ONLINE dot. */}
+        <span className="flex shrink-0 items-center md:hidden">
+          <span className="inline-block h-[8px] w-[8px] rounded-full bg-good" style={{ animation: "pulse 2.4s infinite" }} />
+        </span>
       </div>
+      <MobileNav pendingCount={pendingCount} />
     </div>
   );
 }
