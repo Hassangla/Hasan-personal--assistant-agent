@@ -8,6 +8,7 @@ import { AREA_META, areaMeta } from "@/lib/areas";
 
 export type TaskState = { kind: string; color: string; label: string };
 
+export type ChecklistPreviewItem = { id: string; title: string; done: boolean; dueIso: string | null };
 export type TodayTask = {
   id: string;
   title: string;
@@ -16,6 +17,7 @@ export type TodayTask = {
   state: TaskState;
   dueIso: string | null;
   goalTitle: string | null;
+  checklist: { done: number; total: number; items: ChecklistPreviewItem[] } | null;
 };
 export type GoalProgress = { id: string; title: string; horizon: string; done: number; total: number };
 export type TodayAgendaItem = {
@@ -141,7 +143,8 @@ export async function getDashboardData(): Promise<DashboardData> {
   const sb = supabaseAdmin();
   const OPEN = ["open", "reminded", "escalated", "snoozed"];
 
-  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes, goalTaskRes, meetingRes] = await Promise.all([
+  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes, goalTaskRes, meetingRes, checklistRes] =
+    await Promise.all([
     sb.from("entities").select("id,name").eq("user_id", USER_ID).eq("kind", "area"),
     sb
       .from("tasks")
@@ -188,7 +191,25 @@ export async function getDashboardData(): Promise<DashboardData> {
       .lte("starts_at", new Date(Date.now() + 30 * 3600000).toISOString())
       .order("starts_at", { ascending: true })
       .limit(50),
+    sb
+      .from("task_checklist_items")
+      .select("task_id,id,title,done,due_at,position")
+      .eq("user_id", USER_ID)
+      .order("position", { ascending: true })
+      .limit(1000),
   ]);
+
+  // Checklist preview per task (counts + first items) for row-level display.
+  const checklistByTask = new Map<string, { done: number; total: number; items: ChecklistPreviewItem[] }>();
+  for (const c of (checklistRes.data ?? []) as any[]) {
+    const e = checklistByTask.get(c.task_id) ?? { done: 0, total: 0, items: [] };
+    e.total += 1;
+    if (c.done) e.done += 1;
+    if (e.items.length < 10) {
+      e.items.push({ id: c.id, title: c.title, done: !!c.done, dueIso: c.due_at ?? null });
+    }
+    checklistByTask.set(c.task_id, e);
+  }
 
   const areaById = new Map<string, string>();
   for (const a of (areaRes.data ?? []) as any[]) areaById.set(a.id, a.name);
@@ -226,6 +247,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     state: taskState(t),
     dueIso: t.due_at ?? null,
     goalTitle: t.goal_id ? plansById.get(t.goal_id)?.title ?? null : null,
+    checklist: checklistByTask.get(t.id) ?? null,
   }));
 
   // Goals progress (dashboard strip): linked-task completion per active goal.
