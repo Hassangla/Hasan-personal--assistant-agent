@@ -65,9 +65,9 @@ export async function pullForReminders(userId: string, dry = false): Promise<Rem
       .limit(50),
     sb
       .from("tasks")
-      .select("id,title")
+      .select("id,title,reminders_resync")
       .eq("user_id", userId)
-      .in("status", ["done", "dropped"])
+      .or("status.in.(done,dropped),reminders_resync.is.true")
       .not("reminders_exported_at", "is", null)
       .is("reminders_removed_at", null)
       .limit(50),
@@ -94,18 +94,27 @@ export async function pullForReminders(userId: string, dry = false): Promise<Rem
   if (!dry) {
     const now = new Date().toISOString();
     if (add.length) {
+      // Fresh export = fresh lifecycle (a later completion must be removable).
       await sb
         .from("tasks")
-        .update({ reminders_exported_at: now })
+        .update({ reminders_exported_at: now, reminders_removed_at: null })
         .eq("user_id", userId)
         .in("id", add.map((t) => t.id));
     }
-    if (remove.length) {
+    const removeRows = (removeRes.data ?? []) as any[];
+    const doneIds = removeRows.filter((t) => !t.reminders_resync).map((t) => t.id);
+    const resyncIds = removeRows.filter((t) => t.reminders_resync).map((t) => t.id);
+    if (doneIds.length) {
+      await sb.from("tasks").update({ reminders_removed_at: now }).eq("user_id", userId).in("id", doneIds);
+    }
+    if (resyncIds.length) {
+      // Old reminder removed this cycle; clearing the export marks re-queues
+      // the task so the NEXT cycle re-adds it with the new deadline.
       await sb
         .from("tasks")
-        .update({ reminders_removed_at: now })
+        .update({ reminders_resync: false, reminders_exported_at: null, reminders_removed_at: null })
         .eq("user_id", userId)
-        .in("id", removeRes.data!.map((t: any) => t.id));
+        .in("id", resyncIds);
     }
   }
 

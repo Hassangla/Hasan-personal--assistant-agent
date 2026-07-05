@@ -29,6 +29,14 @@ function fmtSize(bytes: number): string {
   if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${bytes} B`;
 }
+
+// ISO → value for <input type="datetime-local"> in the browser's timezone.
+function isoToLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 type Goal = { id: string; title: string; horizon: string };
 
 function fmtDate(iso: string | null): string {
@@ -68,6 +76,25 @@ export function TaskDetailPanel() {
   const [clDue, setClDue] = useState("");
   const [clArea, setClArea] = useState("");
   const [clBusy, setClBusy] = useState(false);
+  const [editingDue, setEditingDue] = useState(false);
+  const [dueInput, setDueInput] = useState("");
+
+  async function saveDue(value: string) {
+    if (!taskId || busy) return;
+    setBusy(true);
+    try {
+      await fetch("/api/tasks/update", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task_id: taskId, due: value }),
+      });
+      setEditingDue(false);
+      load();
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function checklistCall(payload: Record<string, unknown>) {
     if (clBusy) return;
@@ -238,8 +265,52 @@ export function TaskDetailPanel() {
 
             <div className="mt-4 space-y-3.5">
               <div>
-                <div className={label}>Deadline</div>
-                {d.dueIso ? (
+                <div className={label}>
+                  Deadline
+                  {!editingDue && (
+                    <button
+                      onClick={() => {
+                        setDueInput(isoToLocalInput(d.dueIso));
+                        setEditingDue(true);
+                      }}
+                      className="ml-2 normal-case tracking-normal text-accent hover:underline"
+                    >
+                      {d.dueIso ? "edit" : "set"}
+                    </button>
+                  )}
+                </div>
+                {editingDue ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <input
+                      type="datetime-local"
+                      value={dueInput}
+                      onChange={(e) => setDueInput(e.target.value)}
+                      className="rounded-[8px] border border-line bg-card px-2 py-1.5 text-[12px] text-ink outline-none"
+                    />
+                    <button
+                      onClick={() => saveDue(dueInput)}
+                      disabled={busy || !dueInput}
+                      className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    {d.dueIso && (
+                      <button
+                        onClick={() => saveDue("")}
+                        disabled={busy}
+                        className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-[#B26B5A] disabled:opacity-50"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <button onClick={() => setEditingDue(false)} className="px-1 text-[13px] text-ink3">
+                      ✕
+                    </button>
+                    <span className="basis-full font-mono text-[10px] text-inkfaint">
+                      Synced reminders get the new alert within two sync cycles.
+                    </span>
+                  </div>
+                ) : d.dueIso ? (
                   <>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[14px] text-inkstrong">{fmtDate(d.dueIso)}</span>
