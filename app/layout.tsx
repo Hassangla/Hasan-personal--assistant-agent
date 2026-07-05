@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
 import { TaskDetailPanel } from "@/components/app/TaskDetailPanel";
+import { Toaster } from "@/components/app/Toast";
 
 export const metadata: Metadata = {
   title: "Personal Agent",
@@ -20,6 +21,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <TaskDetailPanel />
         </Suspense>
+        <Toaster />
       </body>
     </html>
   );

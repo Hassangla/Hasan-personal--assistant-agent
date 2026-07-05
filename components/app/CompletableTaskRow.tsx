@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
+import { toast } from "@/components/app/Toast";
 
 type StateChip = { color: string; label: string };
 
@@ -55,11 +56,13 @@ export function CompletableTaskRow({
         body: JSON.stringify({ task_id: id }),
       });
       if (!res.ok) throw new Error();
+      toast("Task completed ✓");
       setTimeout(() => router.refresh(), 900);
     } catch {
       setDone(false);
       setFailed(true);
       setBusy(false);
+      toast("Couldn't complete that — try again", "err");
     }
   }
 

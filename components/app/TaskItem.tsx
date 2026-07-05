@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
+import { toast } from "@/components/app/Toast";
 
 type StateChip = { color: string; label: string };
 type ChecklistPreview = {
@@ -44,21 +45,25 @@ export function TaskItem({
   const [busy, setBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [showCl, setShowCl] = useState(false);
-  const [clBusy, setClBusy] = useState(false);
+  const [clOverrides, setClOverrides] = useState<Record<string, boolean>>({});
+  const [delegating, setDelegating] = useState(false);
+  const [delegateName, setDelegateName] = useState("");
   const m = area ? areaMeta(area) : null;
 
-  async function toggleClItem(itemId: string) {
-    if (clBusy) return;
-    setClBusy(true);
+  // Optimistic: flip instantly, undo only if the server disagrees.
+  async function toggleClItem(itemId: string, currentDone: boolean) {
+    setClOverrides((o) => ({ ...o, [itemId]: !currentDone }));
     try {
-      await fetch("/api/tasks/checklist", {
+      const res = await fetch("/api/tasks/checklist", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action: "toggle", item_id: itemId }),
       });
+      if (!res.ok) throw new Error();
       router.refresh();
-    } finally {
-      setClBusy(false);
+    } catch {
+      setClOverrides((o) => ({ ...o, [itemId]: currentDone }));
+      toast("Couldn't update that item — try again", "err");
     }
   }
 
@@ -73,10 +78,12 @@ export function TaskItem({
     setGone("done");
     try {
       await post("/api/tasks/complete", { task_id: id });
+      toast("Task completed ✓");
       setTimeout(() => router.refresh(), 800);
     } catch {
       setGone(false);
       setBusy(false);
+      toast("Couldn't complete that — try again", "err");
     }
   }
   async function del() {
@@ -85,21 +92,29 @@ export function TaskItem({
     setGone("deleted");
     try {
       await post("/api/tasks/delete", { task_id: id });
+      toast("Task deleted");
       setTimeout(() => router.refresh(), 700);
     } catch {
       setGone(false);
       setBusy(false);
       setConfirmDel(false);
+      toast("Couldn't delete that — try again", "err");
     }
   }
-  async function delegate() {
-    const person = window.prompt("Delegate this task to whom?");
-    if (!person || !person.trim() || busy) return;
+  async function submitDelegate(e: React.FormEvent) {
+    e.preventDefault();
+    const person = delegateName.trim();
+    if (!person || busy) return;
     setBusy(true);
     try {
-      await post("/api/tasks/delegate", { task_id: id, person: person.trim() });
+      await post("/api/tasks/delegate", { task_id: id, person });
+      toast(`Delegated to ${person} → I'm chasing it for you`);
+      setDelegating(false);
+      setDelegateName("");
       router.refresh();
     } catch {
+      toast("Couldn't delegate that — try again", "err");
+    } finally {
       setBusy(false);
     }
   }
@@ -108,9 +123,11 @@ export function TaskItem({
     setBusy(true);
     try {
       await post("/api/tasks/delegate", { task_id: id, takeBack: true });
+      toast("Back in your To-Do ↩");
       router.refresh();
     } catch {
       setBusy(false);
+      toast("Couldn't take that back — try again", "err");
     }
   }
 
@@ -206,10 +223,32 @@ export function TaskItem({
         ))}
 
       {/* MOVE + DELETE */}
-      {!gone && (
+      {!gone && delegating && (
+        <form onSubmit={submitDelegate} className="flex shrink-0 items-center gap-1">
+          <input
+            value={delegateName}
+            onChange={(e) => setDelegateName(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && setDelegating(false)}
+            placeholder="to whom?"
+            autoFocus
+            className="w-[110px] rounded-[7px] border border-line bg-card px-2 py-1 text-[12px] text-ink outline-none"
+          />
+          <button
+            type="submit"
+            disabled={busy || !delegateName.trim()}
+            className="rounded-[7px] bg-accent px-2 py-1 text-[11px] font-bold text-white disabled:opacity-50"
+          >
+            →
+          </button>
+          <button type="button" onClick={() => setDelegating(false)} className={iconBtn} title="Cancel">
+            ✕
+          </button>
+        </form>
+      )}
+      {!gone && !delegating && (
         <div className="flex shrink-0 items-center gap-0.5">
           {variant === "todo" ? (
-            <button onClick={delegate} disabled={busy} title="Delegate → I'm Chasing" className={iconBtn}>
+            <button onClick={() => setDelegating(true)} disabled={busy} title="Delegate → I'm Chasing" className={iconBtn}>
               →
             </button>
           ) : (
@@ -246,28 +285,30 @@ export function TaskItem({
     </div>
     {showCl && checklist && checklist.total > 0 && !gone && (
       <div className="mb-1 ml-[30px] border-l-2 border-line2 pl-3">
-        {checklist.items.map((c) => (
+        {checklist.items.map((c) => {
+          const eff = clOverrides[c.id] ?? c.done;
+          return (
           <div key={c.id} className="flex items-center gap-2 py-[3px] text-[12.5px]">
             <button
               type="button"
-              onClick={() => toggleClItem(c.id)}
-              disabled={clBusy}
-              title={c.done ? "Mark not done" : "Mark done"}
+              onClick={() => toggleClItem(c.id, eff)}
+              title={eff ? "Mark not done" : "Mark done"}
               className={`flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition ${
-                c.done ? "border-good bg-good text-white" : "border-[#CFC6B3] bg-transparent hover:border-good"
+                eff ? "border-good bg-good text-white" : "border-[#CFC6B3] bg-transparent hover:border-good"
               }`}
             >
-              {c.done ? "✓" : ""}
+              {eff ? "✓" : ""}
             </button>
             <span
               className="min-w-0 flex-1 truncate"
-              style={c.done ? { color: "#A99F8C", textDecoration: "line-through" } : { color: "#4A4538" }}
+              style={eff ? { color: "#A99F8C", textDecoration: "line-through" } : { color: "#4A4538" }}
             >
               {c.title}
             </span>
-            {!c.done && c.dueIso && <TaskTimer dueIso={c.dueIso} />}
+            {!eff && c.dueIso && <TaskTimer dueIso={c.dueIso} />}
           </div>
-        ))}
+          );
+        })}
         {checklist.total > checklist.items.length && (
           <button
             type="button"
