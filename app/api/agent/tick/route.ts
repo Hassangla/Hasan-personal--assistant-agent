@@ -114,6 +114,21 @@ async function handle(req: Request) {
       } catch (e) {
         console.error("[tick] meeting push failed:", e);
       }
+      try {
+        const { logNotification } = await import("@/lib/notify");
+        await logNotification({
+          userId,
+          kind: "meeting",
+          title: `Meeting soon: ${m.title}`,
+          body: m.location ? `📍 ${m.location}` : null,
+          url: "/calendar",
+          resourceType: "meeting",
+          resourceId: m.id,
+          channels: "telegram+push",
+        });
+      } catch (e) {
+        console.error("[tick] meeting notify log failed:", e);
+      }
       report.meetings++;
     } catch (err) {
       console.error("[tick] meeting reminder failed:", err);
