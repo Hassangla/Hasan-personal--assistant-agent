@@ -56,7 +56,7 @@ export function MobileNav({ pendingCount = 0 }: { pendingCount?: number }) {
       )}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-1 border-t border-[#E5DECF] bg-[rgba(244,241,234,0.94)] px-2 backdrop-blur-[10px] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-1 border-t border-[#E5DECF] bg-[rgba(244,241,234,0.96)] px-2 shadow-[0_-8px_24px_-14px_rgba(60,45,30,0.4)] backdrop-blur-[10px] md:hidden"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 6px)", paddingTop: "6px" }}
       >
         {main.map((m) => {
