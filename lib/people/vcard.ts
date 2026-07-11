@@ -13,6 +13,7 @@ export type ParsedContact = {
   phones: string[];
   bday: string | null;
   note: string | null;
+  uid: string | null; // vCard UID — the CardDAV sync's stable remote key
 };
 
 function unfold(text: string): string[] {
@@ -71,6 +72,7 @@ export function parseVcf(text: string): ParsedContact[] {
             phones: [...new Set(cur.phones as string[])],
             bday: cur.bday ?? null,
             note: cur.note ?? null,
+            uid: cur.uid ?? null,
           });
         }
       }
@@ -112,6 +114,9 @@ export function parseVcf(text: string): ParsedContact[] {
         break;
       case "NOTE":
         cur.note = unescapeV(value).slice(0, 400);
+        break;
+      case "UID":
+        cur.uid = value.trim().slice(0, 200);
         break;
       default:
         break; // PHOTO, ADR, URL, UID… ignored in v1

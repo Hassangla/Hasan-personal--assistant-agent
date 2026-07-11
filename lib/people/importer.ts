@@ -151,7 +151,7 @@ const CANONICAL = new Set(AREA_META.map((a) => a.canonical));
 export async function commitImport(
   userId: string,
   items: CommitItem[],
-): Promise<{ added: number; merged: number; skipped: number }> {
+): Promise<{ added: number; merged: number; skipped: number; entityIds: (string | null)[] }> {
   const sb = supabaseAdmin();
   const existing = await loadExisting(userId);
   const byId = new Map(existing.map((p) => [p.id, p]));
@@ -161,11 +161,13 @@ export async function commitImport(
   let added = 0,
     merged = 0,
     skipped = 0;
+  const entityIds: (string | null)[] = [];
 
   for (const raw of items.slice(0, 1500)) {
     const name = typeof raw.name === "string" ? raw.name.trim().slice(0, 120) : "";
     if (!name) {
       skipped++;
+      entityIds.push(null);
       continue;
     }
     const emails = (raw.emails ?? []).map(normEmail).filter((e) => e.includes("@")).slice(0, 6);
@@ -199,6 +201,7 @@ export async function commitImport(
       md.source = md.source ?? "vcard-import";
       await sb.from("entities").update({ metadata: md }).eq("id", target.id).eq("user_id", userId);
       merged++;
+      entityIds.push(target.id);
     } else {
       const md: Record<string, unknown> = {
         role: (raw.title || raw.org || "Contact") as string,
@@ -221,6 +224,7 @@ export async function commitImport(
         .single();
       if (error) {
         skipped++;
+        entityIds.push(null);
         continue;
       }
       // Register fingerprints so a duplicate later in the same file merges.
@@ -235,9 +239,10 @@ export async function commitImport(
       byId.set(ins.id, ep);
       for (const h of emailHashes) if (!byEmail.has(h)) byEmail.set(h, ep);
       added++;
+      entityIds.push(ins.id as string);
     }
   }
-  return { added, merged, skipped };
+  return { added, merged, skipped, entityIds };
 }
 
 // Server-side display helper: first decrypted email of a person, if any.
