@@ -48,7 +48,7 @@ const AREA_HINTS: [RegExp, string][] = [
   [/scorp/i, "Scorp Group Ltd."],
   [/draupnir/i, "Draupnir LLC"],
 ];
-function suggestArea(c: ParsedContact): string | null {
+export function suggestArea(c: Pick<ParsedContact, "org" | "title">): string | null {
   const hay = `${c.org ?? ""} ${c.title ?? ""}`;
   for (const [re, area] of AREA_HINTS) if (re.test(hay)) return area;
   return null;
