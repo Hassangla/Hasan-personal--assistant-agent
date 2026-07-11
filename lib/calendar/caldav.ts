@@ -105,7 +105,12 @@ export async function discover(server: string, user: string, pass: string): Prom
     "0",
     `<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop><c:calendar-home-set/></d:prop></d:propfind>`,
   );
-  const homeHref = extractHrefs(p2.text)[0];
+  // Take the href from INSIDE calendar-home-set — the multistatus also lists
+  // the principal's own href first (same trap as the CardDAV discovery).
+  const homeM = p2.text.match(
+    /<(?:[a-z0-9]+:)?calendar-home-set[^>]*>[\s\S]*?<(?:[a-z0-9]+:)?href[^>]*>([^<]+)<\/(?:[a-z0-9]+:)?href>/i,
+  );
+  const homeHref = homeM?.[1]?.trim() ?? extractHrefs(p2.text).find((h) => h !== principalHref);
   if (!homeHref) throw new Error("Couldn't locate the calendar home.");
   const homeUrl = new URL(homeHref, p2.finalUrl).toString();
 

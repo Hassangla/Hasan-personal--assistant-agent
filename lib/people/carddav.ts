@@ -93,7 +93,13 @@ export async function discoverContacts(server: string, user: string, pass: strin
     "0",
     `<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" xmlns:card="urn:ietf:params:xml:ns:carddav"><d:prop><card:addressbook-home-set/></d:prop></d:propfind>`,
   );
-  const homeHref = extractHrefs(p2.text)[0];
+  // The href must come from INSIDE the addressbook-home-set element — the
+  // multistatus also carries the principal's own href first, and grabbing
+  // hrefs[0] silently points discovery at the wrong collection.
+  const homeM = p2.text.match(
+    /<(?:[a-z0-9]+:)?addressbook-home-set[^>]*>[\s\S]*?<(?:[a-z0-9]+:)?href[^>]*>([^<]+)<\/(?:[a-z0-9]+:)?href>/i,
+  );
+  const homeHref = homeM?.[1]?.trim() ?? extractHrefs(p2.text).find((h) => h !== principalHref);
   if (!homeHref) throw new Error("Couldn't locate the addressbook home.");
   const homeUrl = new URL(homeHref, p2.finalUrl).toString();
 
@@ -104,7 +110,19 @@ export async function discoverContacts(server: string, user: string, pass: strin
     "1",
     `<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:resourcetype/></d:prop></d:propfind>`,
   );
-  const addressbooks = extractAddressbooks(p3.text, p3.finalUrl);
+  let addressbooks = extractAddressbooks(p3.text, p3.finalUrl);
+  if (!addressbooks.length) {
+    // iCloud's layout is fixed: <home>/card/ — probe it directly.
+    const candidate = homeUrl.replace(/\/+$/, "") + "/card/";
+    const probe = await dav(
+      "PROPFIND",
+      candidate,
+      a,
+      "0",
+      `<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/></d:prop></d:propfind>`,
+    );
+    if (probe.status < 400) addressbooks = [{ url: candidate, name: "Contacts" }];
+  }
   if (!addressbooks.length) throw new Error("Connected, but found no address books.");
   return { homeUrl, addressbooks };
 }
