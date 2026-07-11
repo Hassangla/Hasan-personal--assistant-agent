@@ -54,6 +54,12 @@ async function handle(req: Request) {
     } catch (e) {
       console.error("[tick] caldav sync failed:", e);
     }
+    try {
+      const { syncCarddavContacts } = await import("@/lib/people/carddav");
+      await syncCarddavContacts(userId);
+    } catch (e) {
+      console.error("[tick] carddav contacts sync failed:", e);
+    }
   };
 
   // QUIET HOURS — no proactive reminders overnight; everything due is held and
