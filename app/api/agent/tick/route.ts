@@ -24,6 +24,7 @@ async function handle(req: Request) {
 
   const sb = supabaseAdmin();
   const userId = USER_ID;
+  const t0 = Date.now();
   const report = { followups: 0, meetings: 0, imported_meetings: 0, relationships: 0, jobs: 0, expired_confirmations: 0 };
 
   // Expire stale pending confirmations so old approvals can't fire (pitfall #5).
@@ -32,24 +33,34 @@ async function handle(req: Request) {
   });
   report.expired_confirmations = typeof expired === "number" ? expired : 0;
 
-  // IMPORTED CALENDARS — pull external (Apple/Google) feeds in. Runs even during
-  // quiet hours: it never sends Telegram, it only refreshes the calendar.
-  try {
-    const imp = await importDueSources(userId);
-    report.imported_meetings = imp.imported;
-  } catch (e) {
-    console.error("[tick] calendar import failed:", e);
-  }
-  try {
-    const cd = await syncCaldavAccounts(userId);
-    report.imported_meetings += cd.imported;
-  } catch (e) {
-    console.error("[tick] caldav sync failed:", e);
-  }
+  // IMPORTED CALENDARS — silent background work (never sends Telegram). Runs
+  // LAST on normal ticks so slow external feeds can't eat the send pipeline's
+  // time budget (a nudge once lost its push+ledger tail to feed latency); a
+  // soft deadline skips it entirely when the tick is already running long.
+  const runImports = async () => {
+    if (Date.now() - t0 > 40_000) {
+      console.warn("[tick] skipping calendar imports — tick running long");
+      return;
+    }
+    try {
+      const imp = await importDueSources(userId);
+      report.imported_meetings = imp.imported;
+    } catch (e) {
+      console.error("[tick] calendar import failed:", e);
+    }
+    try {
+      const cd = await syncCaldavAccounts(userId);
+      report.imported_meetings += cd.imported;
+    } catch (e) {
+      console.error("[tick] caldav sync failed:", e);
+    }
+  };
 
   // QUIET HOURS — no proactive reminders overnight; everything due is held and
   // delivered once the local clock passes QUIET_HOURS_END (default 07:00).
+  // Imports still refresh the calendar silently.
   if (inQuietHours()) {
+    await runImports();
     return NextResponse.json({ ok: true, quiet: true, ...report });
   }
 
@@ -173,6 +184,9 @@ async function handle(req: Request) {
       console.error("[tick] scheduled job failed:", err);
     }
   }
+
+  // Background calendar refresh runs last — sends always take priority.
+  await runImports();
 
   return NextResponse.json({ ok: true, ...report });
 }
