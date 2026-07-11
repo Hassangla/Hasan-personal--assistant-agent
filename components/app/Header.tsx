@@ -32,13 +32,14 @@ export function Header({
   ];
 
   return (
+    <>
     <div className="sticky top-0 z-20 border-b border-[#E5DECF] bg-[rgba(244,241,234,0.88)] backdrop-blur-[10px]">
-      <div className={`mx-auto ${maxW} flex items-center justify-between gap-3 px-4 py-[11px] sm:gap-5 sm:px-8 sm:py-[13px]`}>
-        <Link href="/" className="flex shrink-0 items-center gap-2.5 no-underline sm:gap-3">
+      <div className={`mx-auto ${maxW} flex items-center justify-between gap-3 px-4 py-[10px] sm:gap-5 sm:px-8 sm:py-[13px]`}>
+        <Link href="/" className="flex min-w-0 shrink items-center gap-2.5 no-underline sm:shrink-0 sm:gap-3">
           <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] bg-accent shadow-[0_3px_8px_-2px_rgba(199,95,63,0.5)]">
             <span className="h-[9px] w-[9px] rounded-full bg-white" />
           </span>
-          <span className="hidden font-display text-[16px] font-bold tracking-[-0.01em] text-ink sm:inline">
+          <span className="truncate font-display text-[15px] font-bold tracking-[-0.01em] text-ink sm:text-[16px]">
             Personal Agent
           </span>
           <span className="hidden rounded-[5px] border border-[#E0D8C8] px-1.5 py-0.5 font-mono text-[10px] text-ink3 sm:inline">
@@ -83,12 +84,20 @@ export function Header({
         </div>
 
         {/* On phones the clock cluster is hidden — bell + a compact ONLINE dot. */}
-        <span className="flex shrink-0 items-center gap-2 md:hidden">
+        <span className="flex shrink-0 items-center gap-2.5 md:hidden">
           <NotificationBell />
-          <span className="inline-block h-[8px] w-[8px] rounded-full bg-good" style={{ animation: "pulse 2.4s infinite" }} />
+          <span
+            title="Agent online"
+            className="inline-block h-[8px] w-[8px] rounded-full bg-good"
+            style={{ animation: "pulse 2.4s infinite" }}
+          />
         </span>
       </div>
-      <MobileNav pendingCount={pendingCount} />
     </div>
+    {/* OUTSIDE the blurred container: backdrop-filter turns an ancestor into
+        the containing block for position:fixed, which pinned the bottom nav
+        (and its More sheet) to the header instead of the viewport. */}
+    <MobileNav pendingCount={pendingCount} />
+    </>
   );
 }
