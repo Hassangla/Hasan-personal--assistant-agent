@@ -40,6 +40,18 @@ function untilText(iso: string): string {
   return h === 1 ? "in 1 hour" : `in ${h} hours`;
 }
 
+// Signed distance to a deadline: "in 3 hours" / "overdue by 2 days".
+function dueDistance(iso: string): { text: string; overdue: boolean } {
+  const ms = new Date(iso).getTime() - Date.now();
+  const abs = Math.abs(ms);
+  const m = Math.round(abs / 60_000);
+  const h = Math.round(m / 60);
+  const d = Math.round(h / 24);
+  const span = m < 60 ? `${m} min` : h < 36 ? (h === 1 ? "1 hour" : `${h} hours`) : `${d} days`;
+  if (ms >= -60_000 && ms <= 60_000) return { text: "now", overdue: ms < 0 };
+  return ms > 0 ? { text: `in ${span}`, overdue: false } : { text: `overdue by ${span}`, overdue: true };
+}
+
 const TONE_ICON: Record<string, string> = {
   gentle: "⏰",
   firm: "🔔",
@@ -47,7 +59,8 @@ const TONE_ICON: Record<string, string> = {
   delegated: "👤",
 };
 
-// A task follow-up nudge: header (title + area + due/nudge) then the human ask.
+// A task follow-up nudge. Scannable card: what → when (with a live-feeling
+// countdown / overdue flag) → progress → one short human ask.
 export function formatTaskReminder(o: {
   title: string;
   area?: string | null;
@@ -56,16 +69,29 @@ export function formatTaskReminder(o: {
   tone: string;
   body: string;
   delegatedTo?: string | null;
+  checklist?: { done: number; total: number } | null;
 }): string {
   const icon = TONE_ICON[o.tone] ?? "⏰";
-  const head = o.delegatedTo ? `${icon} <b>Following up</b>` : `${icon} <b>Reminder</b>`;
-  const meta: string[] = [];
-  if (o.area) meta.push(escapeHtml(o.area));
-  if (o.dueIso) meta.push(`due ${escapeHtml(fmtDayTime(o.dueIso))}`);
-  else if (o.nudgeCount && o.nudgeCount > 1) meta.push(`nudge #${o.nudgeCount}`);
-  if (o.delegatedTo) meta.push(`with ${escapeHtml(o.delegatedTo)}`);
-  const metaLine = meta.length ? `\n<i>${meta.join(" · ")}</i>` : "";
-  return `${head}\n<b>${escapeHtml(o.title)}</b>${metaLine}\n\n${escapeHtml(o.body)}`;
+  const kind = o.delegatedTo ? "Following up" : "Reminder";
+  const head = `${icon} <b>${kind}</b>${o.area ? ` · <i>${escapeHtml(o.area)}</i>` : ""}`;
+
+  const lines: string[] = [head, `📌 <b>${escapeHtml(o.title)}</b>`];
+
+  if (o.dueIso) {
+    const dist = dueDistance(o.dueIso);
+    const flag = dist.overdue ? "❗" : "⏳";
+    const distText = dist.overdue ? `<b>${escapeHtml(dist.text)}</b>` : escapeHtml(dist.text);
+    lines.push(`${flag} ${escapeHtml(fmtDayTime(o.dueIso))} — ${distText}`);
+  }
+  if (o.delegatedTo) lines.push(`👤 with ${escapeHtml(o.delegatedTo)}`);
+  if (o.checklist && o.checklist.total > 0) {
+    lines.push(`☑ ${o.checklist.done}/${o.checklist.total} steps done`);
+  }
+  if (!o.dueIso && o.nudgeCount && o.nudgeCount > 1) {
+    lines.push(`<i>nudge #${o.nudgeCount}</i>`);
+  }
+
+  return `${lines.join("\n")}\n\n${escapeHtml(o.body)}`;
 }
 
 // A pre-meeting reminder.

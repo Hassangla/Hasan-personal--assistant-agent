@@ -327,6 +327,15 @@ async function handleCallback(cb: any): Promise<void> {
         await answerCallbackQuery(cbId, "Marked done");
         if (chatId && msgId) await editMessageText(chatId, msgId, "✅ Done.");
         break;
+      case "snooze1h":
+        await executeTool(
+          "snooze_task",
+          { task_id: taskId, until: new Date(Date.now() + 3600000).toISOString() },
+          ctx,
+        );
+        await answerCallbackQuery(cbId, "Snoozed 1 hour");
+        if (chatId && msgId) await editMessageText(chatId, msgId, "⏰ Snoozed — I'll come back in an hour.");
+        break;
       case "snooze1d":
         await executeTool(
           "snooze_task",
@@ -334,7 +343,7 @@ async function handleCallback(cb: any): Promise<void> {
           ctx,
         );
         await answerCallbackQuery(cbId, "Snoozed 1 day");
-        if (chatId && msgId) await editMessageText(chatId, msgId, "😴 Snoozed 1 day.");
+        if (chatId && msgId) await editMessageText(chatId, msgId, "😴 Snoozed — back tomorrow.");
         break;
       case "snoozeask":
         await answerCallbackQuery(cbId);

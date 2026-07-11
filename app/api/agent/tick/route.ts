@@ -97,6 +97,23 @@ async function handle(req: Request) {
         person: personName,
       });
       await sendMessage(text, { parseMode: "HTML" });
+      // Mirror to web push (installed PWA on iPhone/iPad/desktop).
+      try {
+        const { sendPushToAll } = await import("@/lib/push");
+        const t = new Intl.DateTimeFormat("en-GB", {
+          timeZone: process.env.USER_TIMEZONE || "UTC",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(new Date(m.starts_at));
+        await sendPushToAll(userId, {
+          title: `Meeting soon: ${m.title}`,
+          body: `${t}${m.location ? ` · ${m.location}` : ""}`,
+          url: "/calendar",
+        });
+      } catch (e) {
+        console.error("[tick] meeting push failed:", e);
+      }
       report.meetings++;
     } catch (err) {
       console.error("[tick] meeting reminder failed:", err);

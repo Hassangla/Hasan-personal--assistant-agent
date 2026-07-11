@@ -35,10 +35,11 @@ export function followupKeyboard(taskId: string, delegated: boolean): InlineKeyb
   return [
     [
       { text: "✅ Done", callback_data: `fu:${taskId}:done` },
-      { text: "😴 Snooze 1d", callback_data: `fu:${taskId}:snooze1d` },
+      { text: "⏰ +1h", callback_data: `fu:${taskId}:snooze1h` },
+      { text: "😴 1 day", callback_data: `fu:${taskId}:snooze1d` },
     ],
     [
-      { text: "🕒 Snooze to…", callback_data: `fu:${taskId}:snoozeask` },
+      { text: "🕒 Pick a time…", callback_data: `fu:${taskId}:snoozeask` },
       { text: "👤 Delegate", callback_data: `fu:${taskId}:delegate` },
       { text: "🗑 Drop", callback_data: `fu:${taskId}:drop` },
     ],

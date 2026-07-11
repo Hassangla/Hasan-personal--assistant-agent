@@ -5,6 +5,7 @@ import { remindersPullPath, remindersPushPath } from "@/lib/reminders";
 import { Header } from "@/components/app/Header";
 import { CalendarSync } from "@/components/app/CalendarSync";
 import { RemindersSync } from "@/components/app/RemindersSync";
+import { NotificationsSetup } from "@/components/app/NotificationsSetup";
 import { Card, SectionHeader, AreaTag } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
@@ -77,10 +78,16 @@ export default async function CalendarPage() {
           <RemindersSync pullUrl={remPull} pushUrl={remPush} />
         </Card>
 
+        {/* PUSH NOTIFICATIONS */}
+        <Card className="mt-6 px-5 pb-5 pt-6 sm:px-7">
+          <SectionHeader index="04" title="Notifications" size={20} note="— iPhone · iPad · desktop" />
+          <NotificationsSetup />
+        </Card>
+
         {/* PAST */}
         {d.past.length > 0 && (
           <Card className="mt-6 px-5 pb-4 pt-6 sm:px-7">
-            <SectionHeader index="04" title="Past" size={20} meta={`${d.past.length}`} />
+            <SectionHeader index="05" title="Past" size={20} meta={`${d.past.length}`} />
             <div className="mt-2 opacity-80">
               {d.past.map((m) => (
                 <MeetingRow key={m.id} m={m} />
