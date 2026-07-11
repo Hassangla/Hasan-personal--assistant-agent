@@ -11,6 +11,13 @@ const PUBLIC_PREFIXES = [
   "/api/agent/tick", // verifies CRON_SECRET
   "/api/calendar", // .ics subscription feed — the URL token is the credential
   "/api/reminders", // Apple Reminders shortcut sync — URL token is the credential
+  // PWA statics — the service worker and manifest must load without a session
+  // or Home-Screen install + push registration break.
+  "/sw.js",
+  "/manifest.webmanifest",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/apple-touch-icon.png",
 ];
 
 export async function middleware(req: NextRequest) {
