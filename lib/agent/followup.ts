@@ -227,4 +227,21 @@ export async function runFollowupTransition(task: TaskRow): Promise<void> {
   } catch (e) {
     console.error("[followup] push mirror failed:", e);
   }
+
+  // Ledger for the bell — "what was that notification about?"
+  try {
+    const { logNotification } = await import("@/lib/notify");
+    await logNotification({
+      userId: task.user_id,
+      kind: "task_nudge",
+      title: task.delegated_to ? `Following up: ${task.title}` : `Reminder: ${task.title}`,
+      body,
+      url: `/?task=${task.id}`,
+      resourceType: "task",
+      resourceId: task.id,
+      channels: "telegram+push",
+    });
+  } catch (e) {
+    console.error("[followup] notify log failed:", e);
+  }
 }
