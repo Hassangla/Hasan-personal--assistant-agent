@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { USER_ID } from "@/lib/config";
 import { areaMeta } from "@/lib/areas";
 import { taskState } from "@/lib/dashboard/queries";
+import { firstEmailOf } from "@/lib/people/importer";
 
 export type PeopleContact = {
   id: string;
@@ -146,7 +147,7 @@ export async function getPeopleData(): Promise<{ contacts: PeopleContact[]; pend
       name: p.name,
       role,
       org,
-      email: (md.email as string) || "",
+      email: firstEmailOf(md), // decrypts emails_enc server-side; falls back to legacy md.email
       area,
       last: relTime(lastIso),
       summary,

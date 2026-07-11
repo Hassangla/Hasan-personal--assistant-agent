@@ -2,6 +2,7 @@ import { getPeopleData } from "@/lib/dashboard/people";
 import { USER_TIMEZONE } from "@/lib/config";
 import { Header } from "@/components/app/Header";
 import { PeopleBrowser } from "@/components/app/PeopleBrowser";
+import { PeopleImport } from "@/components/app/PeopleImport";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,9 @@ export default async function PeoplePage() {
     <div className="min-h-screen pb-[72px]">
       <Header active="people" pendingCount={pendingCount} tz={USER_TIMEZONE} />
       <div className="mx-auto max-w-[1180px] px-4 sm:px-8">
+        <div className="mt-6">
+          <PeopleImport />
+        </div>
         <PeopleBrowser contacts={contacts} />
       </div>
     </div>
