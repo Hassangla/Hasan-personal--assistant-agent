@@ -133,13 +133,17 @@ function transition(task: TaskRow): {
     };
   }
 
-  // Hard deadline time: remind hourly until done — never auto-stop.
+  // Hard deadline: keep chasing until done, but pace it like a human would —
+  // every ~4h at a distance, hourly only in the final 6h crunch, and every 3h
+  // once overdue (an hourly drumbeat past the deadline just gets muted).
   if (task.due_at) {
     const becomingEscalated = task.status !== "open";
+    const msLeft = new Date(task.due_at).getTime() - Date.now();
+    const cadence = msLeft < 0 ? 3 * HOURS : msLeft <= 6 * HOURS ? 1 * HOURS : 4 * HOURS;
     return {
       status: becomingEscalated ? "escalated" : "reminded",
       escalation_level: (task.escalation_level ?? 0) + 1,
-      next_nudge_at: isoIn(1 * HOURS),
+      next_nudge_at: isoIn(cadence),
       tone: becomingEscalated ? "strong" : "firm",
     };
   }
@@ -188,6 +192,14 @@ export async function runFollowupTransition(task: TaskRow): Promise<void> {
 
   const body = await composeNudge(task, t.tone);
   const areaLabel = await resolveAreaLabel(task.area_id);
+
+  // Checklist progress, when the task has steps.
+  let checklist: { done: number; total: number } | null = null;
+  const { data: clRows } = await sb.from("task_checklist_items").select("done").eq("task_id", task.id).limit(100);
+  if (clRows && clRows.length) {
+    checklist = { done: clRows.filter((c: any) => c.done).length, total: clRows.length };
+  }
+
   const text = formatTaskReminder({
     title: task.title,
     area: areaLabel,
@@ -196,9 +208,23 @@ export async function runFollowupTransition(task: TaskRow): Promise<void> {
     tone: t.tone,
     body,
     delegatedTo: task.delegated_to,
+    checklist,
   });
   await sendMessage(text, {
     parseMode: "HTML",
     buttons: followupKeyboard(task.id, Boolean(task.delegated_to)),
   });
+
+  // Mirror to web push (iPhone/iPad/desktop with the PWA installed).
+  try {
+    const { sendPushToAll } = await import("@/lib/push");
+    const dist = task.due_at ? ` · due ${formatDue(task.due_at)}` : "";
+    await sendPushToAll(task.user_id, {
+      title: task.delegated_to ? `Following up: ${task.title}` : `Reminder: ${task.title}`,
+      body: `${body}${dist}`.slice(0, 160),
+      url: `/?task=${task.id}`,
+    });
+  } catch (e) {
+    console.error("[followup] push mirror failed:", e);
+  }
 }

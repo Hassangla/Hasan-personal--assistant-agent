@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import "./globals.css";
 import { TaskDetailPanel } from "@/components/app/TaskDetailPanel";
@@ -7,6 +7,13 @@ import { Toaster } from "@/components/app/Toast";
 export const metadata: Metadata = {
   title: "Personal Agent",
   description: "A proactive personal chief-of-staff agent.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Agent" },
+  icons: { apple: "/apple-touch-icon.png" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F4F1EA",
 };
 
 export default function RootLayout({

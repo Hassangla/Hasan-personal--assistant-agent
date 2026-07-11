@@ -116,6 +116,19 @@ export const TOOLS: ToolDef[] = [
         next_nudge_at: { type: "string", description: "ISO-8601; when to first chase. Defaults before due_at." },
         urgency: { type: "string", enum: ["low", "normal", "high"] },
         priority_score: { type: "number" },
+        subtasks: {
+          type: "array",
+          description:
+            "Checklist sub-steps when the request contains one objective with multiple steps/details. Each may carry its own ISO deadline. Keep titles short.",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              due_at: { type: "string", description: "Optional ISO-8601 deadline for this step." },
+            },
+            required: ["title"],
+          },
+        },
       },
       required: ["title"],
     },
@@ -142,6 +155,25 @@ export const TOOLS: ToolDef[] = [
         .select("id, title, status, due_at, next_nudge_at")
         .single();
       if (error) throw new Error(`create_task: ${error.message}`);
+      // Sub-steps land as checklist items on the task (visible on the
+      // dashboard rows and in the detail panel, each with its own deadline).
+      const subs = Array.isArray(input.subtasks) ? input.subtasks : [];
+      if (data && subs.length) {
+        const rows = subs
+          .filter((s: any) => s && typeof s.title === "string" && s.title.trim())
+          .slice(0, 30)
+          .map((s: any, i: number) => ({
+            user_id: ctx.userId,
+            task_id: data.id,
+            title: String(s.title).trim().slice(0, 300),
+            due_at: toIso(s.due_at),
+            position: i,
+          }));
+        if (rows.length) {
+          const { error: subErr } = await sb.from("task_checklist_items").insert(rows);
+          if (subErr) console.error("[create_task] subtasks insert failed:", subErr.message);
+        }
+      }
       // Buttons-first: when no area was stated, ask via inline area buttons.
       if (!areaId && data) {
         try {
@@ -150,7 +182,7 @@ export const TOOLS: ToolDef[] = [
           console.error("[create_task] sendTaskOptions failed:", e);
         }
       }
-      return { ...data };
+      return { ...data, subtasks: subs.length };
     },
   },
 
