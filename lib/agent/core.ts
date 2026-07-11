@@ -41,11 +41,12 @@ async function persistMessage(
   role: "user" | "assistant" | "tool",
   content: string | null,
   toolCalls?: unknown,
+  channel: string = "telegram",
 ): Promise<void> {
   const sb = supabaseAdmin();
   await sb.from("messages").insert({
     user_id: userId,
-    channel: "telegram",
+    channel,
     role,
     content,
     tool_calls: toolCalls ?? null,
@@ -61,6 +62,7 @@ export async function runAgent(params: {
   inboundText?: string;
   contextHint?: string;
   chatId?: string;
+  channel?: string; // where this turn came from: telegram | chat | dashboard
   complexity?: Complexity; // override the model tier
   model?: string; // hard override
 }): Promise<string> {
@@ -112,8 +114,9 @@ export async function runAgent(params: {
     convo.push({ role: "user", content: userTurn });
   }
 
+  const channel = params.channel ?? "telegram";
   if (params.inboundText?.trim()) {
-    await persistMessage(userId, "user", params.inboundText.trim());
+    await persistMessage(userId, "user", params.inboundText.trim(), undefined, channel);
   }
 
   // 5. Tool loop (hard-capped to prevent runaway loops — spec pitfall #3).
@@ -174,10 +177,10 @@ export async function runAgent(params: {
 
   // 6. Persist outcome.
   if (usedTools.length) {
-    await persistMessage(userId, "tool", null, usedTools);
+    await persistMessage(userId, "tool", null, usedTools, channel);
   }
   if (finalText) {
-    await persistMessage(userId, "assistant", finalText, usedTools.length ? usedTools : null);
+    await persistMessage(userId, "assistant", finalText, usedTools.length ? usedTools : null, channel);
   }
 
   return finalText;
