@@ -14,9 +14,10 @@ type Props = {
   connected: { username: string; lastStatus: string | null } | null;
   hasCalendarICloud: boolean;
   pending: PendingRow[];
+  pendingTotal: number;
 };
 
-export function PeopleSync({ connected, hasCalendarICloud, pending }: Props) {
+export function PeopleSync({ connected, hasCalendarICloud, pending, pendingTotal }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [busyRow, setBusyRow] = useState<string | null>(null);
@@ -43,6 +44,43 @@ export function PeopleSync({ connected, hasCalendarICloud, pending }: Props) {
       router.refresh();
     } finally {
       setBusy(false);
+    }
+  }
+
+  const [bulk, setBulk] = useState<string | null>(null);
+
+  // Batch-loop until the queue drains — each request stays inside the
+  // serverless time budget; progress lands as toasts.
+  async function bulkRun(action: "approve_batch" | "dismiss_batch") {
+    const verb = action === "approve_batch" ? "Adding" : "Dismissing";
+    if (bulk) return;
+    if (!window.confirm(action === "approve_batch"
+      ? `Add all ${pendingTotal} pending contacts to the CRM? Areas are auto-suggested where possible.`
+      : `Dismiss all ${pendingTotal} pending contacts? They stay in iCloud and won't be asked about again.`)) return;
+    setBulk(action);
+    try {
+      let remaining = pendingTotal;
+      let done = 0;
+      while (remaining > 0) {
+        const res = await fetch("/api/people/carddav/inbox", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action, limit: 100 }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast(j.error ?? "Bulk action failed — you can retry, it resumes", "err");
+          break;
+        }
+        done += j.processed ?? 0;
+        remaining = j.remaining ?? 0;
+        if (j.processed === 0) break;
+        toast(`${verb}… ${done} done, ${remaining} left`);
+      }
+      toast(remaining === 0 ? `${verb === "Adding" ? "All added" : "All dismissed"} ✓` : `Stopped — ${remaining} left`);
+      router.refresh();
+    } finally {
+      setBulk(null);
     }
   }
 
@@ -142,8 +180,23 @@ export function PeopleSync({ connected, hasCalendarICloud, pending }: Props) {
 
       {connected && pending.length > 0 && (
         <div className="mt-3">
-          <div className="mb-1.5 text-[12px] text-ink2">
-            <b className="text-inkstrong">{pending.length}</b> new from iCloud awaiting review
+          <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[12px] text-ink2">
+            <span>
+              <b className="text-inkstrong">{pendingTotal}</b> new from iCloud awaiting review
+              {pendingTotal > pending.length ? ` (showing first ${pending.length})` : ""}
+            </span>
+            <span className="ml-auto flex gap-2">
+              <button
+                onClick={() => bulkRun("approve_batch")}
+                disabled={!!bulk}
+                className={`${ghost} text-good hover:border-good`}
+              >
+                {bulk === "approve_batch" ? "Adding…" : `✓ Add all ${pendingTotal}`}
+              </button>
+              <button onClick={() => bulkRun("dismiss_batch")} disabled={!!bulk} className={ghost}>
+                {bulk === "dismiss_batch" ? "Dismissing…" : "✕ Dismiss all"}
+              </button>
+            </span>
           </div>
           <div className="max-h-[300px] overflow-y-auto rounded-[10px] border border-line2">
             {pending.map((p) => (

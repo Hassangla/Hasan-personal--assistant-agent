@@ -21,7 +21,7 @@ export default async function PeoplePage() {
       .maybeSingle(),
     sb
       .from("carddav_contacts")
-      .select("id,name,payload")
+      .select("id,name,payload", { count: "exact" })
       .eq("user_id", USER_ID)
       .eq("status", "pending")
       .order("created_at", { ascending: true })
@@ -57,6 +57,7 @@ export default async function PeoplePage() {
             }
             hasCalendarICloud={!!calRes.data}
             pending={pending}
+            pendingTotal={pendingRes.count ?? pending.length}
           />
           <PeopleImport />
         </div>
