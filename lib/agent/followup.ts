@@ -215,13 +215,19 @@ export async function runFollowupTransition(task: TaskRow): Promise<void> {
     buttons: followupKeyboard(task.id, Boolean(task.delegated_to)),
   });
 
-  // Mirror to web push (iPhone/iPad/desktop with the PWA installed).
+  // Mirror to web push (iPhone/iPad/desktop with the PWA installed) — carry
+  // the full context: the ask, area, checklist progress, and the deadline.
+  const pushMeta: string[] = [];
+  if (areaLabel) pushMeta.push(areaLabel);
+  if (checklist && checklist.total > 0) pushMeta.push(`☑ ${checklist.done}/${checklist.total}`);
+  if (task.due_at) pushMeta.push(`due ${formatDue(task.due_at)}`);
+  if (task.delegated_to) pushMeta.push(`with ${task.delegated_to}`);
+  const pushBody = `${body}${pushMeta.length ? `\n${pushMeta.join(" · ")}` : ""}`.slice(0, 220);
   try {
     const { sendPushToAll } = await import("@/lib/push");
-    const dist = task.due_at ? ` · due ${formatDue(task.due_at)}` : "";
     await sendPushToAll(task.user_id, {
       title: task.delegated_to ? `Following up: ${task.title}` : `Reminder: ${task.title}`,
-      body: `${body}${dist}`.slice(0, 160),
+      body: pushBody,
       url: `/?task=${task.id}`,
     });
   } catch (e) {
@@ -235,7 +241,7 @@ export async function runFollowupTransition(task: TaskRow): Promise<void> {
       userId: task.user_id,
       kind: "task_nudge",
       title: task.delegated_to ? `Following up: ${task.title}` : `Reminder: ${task.title}`,
-      body,
+      body: pushBody.replace(/\n/g, " · "),
       url: `/?task=${task.id}`,
       resourceType: "task",
       resourceId: task.id,
