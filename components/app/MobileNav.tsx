@@ -13,11 +13,12 @@ export function MobileNav({ pendingCount = 0 }: { pendingCount?: number }) {
 
   const main = [
     { href: "/", glyph: "🏠", label: "Home" },
-    { href: "/goals", glyph: "🎯", label: "Goals" },
+    { href: "/chat", glyph: "💬", label: "Chat" },
     { href: "/calendar", glyph: "🗓", label: "Calendar" },
-    { href: "/people", glyph: "👥", label: "People" },
+    { href: "/goals", glyph: "🎯", label: "Goals" },
   ];
   const moreItems = [
+    { href: "/people", glyph: "👥", label: "People", badge: 0 },
     { href: "/approvals", glyph: "✅", label: "Approvals", badge: pendingCount },
     { href: "/productivity", glyph: "📈", label: "Productivity", badge: 0 },
     { href: "/archive", glyph: "🗂", label: "Archive", badge: 0 },

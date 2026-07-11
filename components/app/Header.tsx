@@ -12,7 +12,7 @@ export function Header({
   tz,
   width = "wide",
 }: {
-  active?: "dashboard" | "calendar" | "goals" | "people" | "approvals" | "archive" | "productivity";
+  active?: "dashboard" | "chat" | "calendar" | "goals" | "people" | "approvals" | "archive" | "productivity";
   pendingCount?: number;
   tz: string;
   width?: "wide" | "narrow";
@@ -23,6 +23,7 @@ export function Header({
   const maxW = "max-w-[1180px]";
   const nav: { key: NonNullable<typeof active>; label: string; href: string }[] = [
     { key: "dashboard", label: "Dashboard", href: "/" },
+    { key: "chat", label: "Chat", href: "/chat" },
     { key: "calendar", label: "Calendar", href: "/calendar" },
     { key: "goals", label: "Goals", href: "/goals" },
     { key: "people", label: "People", href: "/people" },

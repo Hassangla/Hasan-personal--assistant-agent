@@ -31,12 +31,33 @@ async function tgCall(
   return json;
 }
 
+// Proactive-Telegram kill switch: once the user moves to in-app chat + push,
+// agent-initiated sends (no explicit chatId) are suppressed when app_config
+// proactive_telegram = 'off'. Replies to the user's own Telegram messages
+// (explicit chatId) always deliver. Cached for a minute per warm lambda.
+let tgFlagCache: { value: boolean; at: number } | null = null;
+async function proactiveTelegramEnabled(): Promise<boolean> {
+  if (tgFlagCache && Date.now() - tgFlagCache.at < 60_000) return tgFlagCache.value;
+  try {
+    const { supabaseAdmin } = await import("@/lib/supabase/server");
+    const { data } = await supabaseAdmin().from("app_config").select("value").eq("key", "proactive_telegram").maybeSingle();
+    const value = (data?.value ?? "on") !== "off";
+    tgFlagCache = { value, at: Date.now() };
+    return value;
+  } catch {
+    return true; // fail open — better a duplicate ping than a silent drop
+  }
+}
+
 // Plain text by default: agent replies often contain underscores/asterisks
 // that would break Telegram's Markdown parser and 400 the whole message.
 export async function sendMessage(
   text: string,
   opts?: { chatId?: string; buttons?: InlineKeyboard; parseMode?: "HTML" | "MarkdownV2" },
 ): Promise<{ messageId?: number }> {
+  if (!opts?.chatId && !(await proactiveTelegramEnabled())) {
+    return {}; // proactive send suppressed — push + bell carry it now
+  }
   const json = await tgCall("sendMessage", {
     chat_id: opts?.chatId ?? defaultChatId(),
     text: text.slice(0, 4096),
