@@ -141,7 +141,7 @@ export default async function Dashboard() {
             <SectionHeader index="02" title="To-Do" note="— your tasks" meta={`${d.today.length}`} />
             <div className="mt-1.5">
               {d.today.length ? (
-                <TodoList tasks={d.today} />
+                <TodoList tasks={d.today} done={d.recentDone} />
               ) : (
                 <p className="py-6 text-center text-[14px] text-ink3">All clear — add a task below or capture one above.</p>
               )}
