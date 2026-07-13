@@ -18,7 +18,9 @@ export type TodayTask = {
   dueIso: string | null;
   goalTitle: string | null;
   checklist: { done: number; total: number; items: ChecklistPreviewItem[] } | null;
+  stage: "todo" | "doing";
 };
+export type DoneTask = { id: string; title: string; area: string | null; completedIso: string | null };
 export type GoalProgress = { id: string; title: string; horizon: string; done: number; total: number };
 export type TodayAgendaItem = {
   id: string;
@@ -72,6 +74,7 @@ export type DashboardData = {
   goalsProgress: GoalProgress[];
   todayAgenda: TodayAgendaItem[];
   todayLabel: string;
+  recentDone: DoneTask[];
   pendingCount: number;
 };
 
@@ -143,13 +146,13 @@ export async function getDashboardData(): Promise<DashboardData> {
   const sb = supabaseAdmin();
   const OPEN = ["open", "reminded", "escalated", "snoozed"];
 
-  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes, goalTaskRes, meetingRes, checklistRes] =
+  const [areaRes, taskRes, emailRes, peopleRes, planRes, pendingRes, goalTaskRes, meetingRes, checklistRes, doneRes] =
     await Promise.all([
     sb.from("entities").select("id,name").eq("user_id", USER_ID).eq("kind", "area"),
     sb
       .from("tasks")
       .select(
-        "id,title,status,due_at,priority_score,urgency,area_id,person_id,delegated_to,nudge_count,last_nudged_at,updated_at,goal_id",
+        "id,title,status,due_at,priority_score,urgency,area_id,person_id,delegated_to,nudge_count,last_nudged_at,updated_at,goal_id,board_stage",
       )
       .eq("user_id", USER_ID)
       .in("status", OPEN)
@@ -197,6 +200,13 @@ export async function getDashboardData(): Promise<DashboardData> {
       .eq("user_id", USER_ID)
       .order("position", { ascending: true })
       .limit(1000),
+    sb
+      .from("tasks")
+      .select("id,title,area_id,completed_at")
+      .eq("user_id", USER_ID)
+      .eq("status", "done")
+      .order("completed_at", { ascending: false, nullsFirst: false })
+      .limit(15),
   ]);
 
   // Checklist preview per task (counts + first items) for row-level display.
@@ -248,6 +258,14 @@ export async function getDashboardData(): Promise<DashboardData> {
     dueIso: t.due_at ?? null,
     goalTitle: t.goal_id ? plansById.get(t.goal_id)?.title ?? null : null,
     checklist: checklistByTask.get(t.id) ?? null,
+    stage: t.board_stage === "doing" ? ("doing" as const) : ("todo" as const),
+  }));
+
+  const recentDone: DoneTask[] = ((doneRes.data ?? []) as any[]).map((t) => ({
+    id: t.id,
+    title: t.title,
+    area: areaNameOf(t.area_id),
+    completedIso: t.completed_at ?? null,
   }));
 
   // Goals progress (dashboard strip): linked-task completion per active goal.
@@ -438,6 +456,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     goalsProgress,
     todayAgenda,
     todayLabel,
+    recentDone,
     pendingCount: metrics.awaitingOK,
   };
 }

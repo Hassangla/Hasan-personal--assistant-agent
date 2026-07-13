@@ -3,21 +3,24 @@
 import { useEffect, useState } from "react";
 import { TaskItem } from "@/components/app/TaskItem";
 import { TaskTable } from "@/components/app/TaskTable";
-import type { TodayTask } from "@/lib/dashboard/queries";
+import { TaskBoard } from "@/components/app/TaskBoard";
+import type { TodayTask, DoneTask } from "@/lib/dashboard/queries";
 
 const PAGE_SIZE = 15;
+type View = "list" | "table" | "board";
 
-// The dashboard To-Do list: client-side pagination (every open task is
-// reachable) and a persisted view switch — cozy list or Notion-style table.
-export function TodoList({ tasks }: { tasks: TodayTask[] }) {
+// The dashboard To-Do list: persisted view switch — cozy list, Notion-style
+// table, or Trello-style board — with pagination on list/table (the board
+// shows every lane in full).
+export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: DoneTask[] }) {
   const [page, setPage] = useState(0);
-  const [view, setView] = useState<"list" | "table">("list");
+  const [view, setView] = useState<View>("list");
 
   useEffect(() => {
     const saved = window.localStorage.getItem("pa-todo-view");
-    if (saved === "table") setView("table");
+    if (saved === "table" || saved === "board") setView(saved);
   }, []);
-  function switchView(v: "list" | "table") {
+  function switchView(v: View) {
     setView(v);
     try {
       window.localStorage.setItem("pa-todo-view", v);
@@ -47,10 +50,15 @@ export function TodoList({ tasks }: { tasks: TodayTask[] }) {
           <button type="button" onClick={() => switchView("table")} title="Table view" className={viewBtn(view === "table")}>
             ⊞ Table
           </button>
+          <button type="button" onClick={() => switchView("board")} title="Board view" className={viewBtn(view === "board")}>
+            ⫴ Board
+          </button>
         </div>
       </div>
 
-      {view === "table" ? (
+      {view === "board" ? (
+        <TaskBoard tasks={tasks} done={done} />
+      ) : view === "table" ? (
         <TaskTable tasks={slice} />
       ) : (
         slice.map((t) => (
@@ -68,7 +76,7 @@ export function TodoList({ tasks }: { tasks: TodayTask[] }) {
           />
         ))
       )}
-      {tasks.length > PAGE_SIZE && (
+      {view !== "board" && tasks.length > PAGE_SIZE && (
         <div className="flex items-center justify-between gap-2 border-t border-line2 pt-2.5">
           <button type="button" onClick={() => setPage(cur - 1)} disabled={cur === 0} className={navBtn}>
             ‹ Prev
