@@ -1,24 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TaskItem } from "@/components/app/TaskItem";
 import { TaskTable } from "@/components/app/TaskTable";
 import { TaskBoard } from "@/components/app/TaskBoard";
+import { TaskFilters, applyFilters, isFiltering, EMPTY_FILTERS, type TaskFilterState } from "@/components/app/TaskFilters";
+import { areaMeta } from "@/lib/areas";
 import type { TodayTask, DoneTask } from "@/lib/dashboard/queries";
 
 const PAGE_SIZE = 15;
 type View = "list" | "table" | "board";
 
 // The dashboard To-Do list: persisted view switch — cozy list, Notion-style
-// table, or Trello-style board — with pagination on list/table (the board
-// shows every lane in full).
+// table, or Trello-style board — plus a label/filter bar that narrows every
+// view the same way. Pagination on list/table; the board shows lanes in full.
 export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: DoneTask[] }) {
   const [page, setPage] = useState(0);
   const [view, setView] = useState<View>("list");
+  const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("pa-todo-view");
     if (saved === "table" || saved === "board") setView(saved);
+    try {
+      const f = JSON.parse(window.localStorage.getItem("pa-todo-filters") ?? "");
+      if (f && typeof f === "object" && Array.isArray(f.areas)) setFilters({ ...EMPTY_FILTERS, ...f });
+    } catch {
+      /* none saved */
+    }
   }, []);
   function switchView(v: View) {
     setView(v);
@@ -28,10 +37,30 @@ export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: Done
       /* private mode */
     }
   }
+  function changeFilters(f: TaskFilterState) {
+    setFilters(f);
+    setPage(0);
+    try {
+      window.localStorage.setItem("pa-todo-filters", JSON.stringify(f));
+    } catch {
+      /* private mode */
+    }
+  }
 
-  const pages = Math.max(1, Math.ceil(tasks.length / PAGE_SIZE));
+  const filtered = useMemo(() => applyFilters(tasks, filters), [tasks, filters]);
+  // The Done lane only understands the label filter — done cards carry no
+  // due/checklist/goal data.
+  const filteredDone = useMemo(
+    () =>
+      filters.areas.length
+        ? done.filter((d) => d.area && filters.areas.includes(areaMeta(d.area).canonical))
+        : done,
+    [done, filters],
+  );
+
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const cur = Math.min(page, pages - 1);
-  const slice = tasks.slice(cur * PAGE_SIZE, (cur + 1) * PAGE_SIZE);
+  const slice = filtered.slice(cur * PAGE_SIZE, (cur + 1) * PAGE_SIZE);
 
   const navBtn =
     "rounded-[8px] border border-line bg-card px-2.5 py-1 font-mono text-[11px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32] disabled:cursor-default disabled:opacity-35";
@@ -56,8 +85,12 @@ export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: Done
         </div>
       </div>
 
-      {view === "board" ? (
-        <TaskBoard tasks={tasks} done={done} />
+      <TaskFilters filters={filters} onChange={changeFilters} total={tasks.length} shown={filtered.length} />
+
+      {filtered.length === 0 && isFiltering(filters) ? (
+        <p className="py-6 text-center text-[13.5px] text-ink3">Nothing matches these filters.</p>
+      ) : view === "board" ? (
+        <TaskBoard tasks={filtered} done={filteredDone} />
       ) : view === "table" ? (
         <TaskTable tasks={slice} />
       ) : (
@@ -76,14 +109,14 @@ export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: Done
           />
         ))
       )}
-      {view !== "board" && tasks.length > PAGE_SIZE && (
+      {view !== "board" && filtered.length > PAGE_SIZE && (
         <div className="flex items-center justify-between gap-2 border-t border-line2 pt-2.5">
           <button type="button" onClick={() => setPage(cur - 1)} disabled={cur === 0} className={navBtn}>
             ‹ Prev
           </button>
           <span className="font-mono text-[11px] text-ink3">
-            {cur * PAGE_SIZE + 1}–{Math.min(tasks.length, (cur + 1) * PAGE_SIZE)} of {tasks.length} · page {cur + 1}/
-            {pages}
+            {cur * PAGE_SIZE + 1}–{Math.min(filtered.length, (cur + 1) * PAGE_SIZE)} of {filtered.length} · page{" "}
+            {cur + 1}/{pages}
           </span>
           <button type="button" onClick={() => setPage(cur + 1)} disabled={cur >= pages - 1} className={navBtn}>
             Next ›
