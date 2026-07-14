@@ -67,7 +67,7 @@ export function RemindersSync({ pullUrl, pushUrl }: { pullUrl: string; pushUrl: 
               </code>
               <button
                 onClick={() => copy(kind, url)}
-                className="rounded-[8px] border border-line bg-card px-2.5 py-1 text-[11px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32]"
+                className="rounded-[8px] border border-line bg-card px-2.5 py-1 text-[11px] font-semibold text-ink2 transition hover:border-[#3A3F47] hover:text-[#E4E2DC]"
               >
                 {copied === kind ? "Copied ✓" : "Copy"}
               </button>
@@ -81,7 +81,7 @@ export function RemindersSync({ pullUrl, pushUrl }: { pullUrl: string; pushUrl: 
           <button
             onClick={requeue}
             disabled={requeueBusy}
-            className="rounded-[8px] border border-line bg-card px-2.5 py-1 text-[11px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32] disabled:opacity-50"
+            className="rounded-[8px] border border-line bg-card px-2.5 py-1 text-[11px] font-semibold text-ink2 transition hover:border-[#3A3F47] hover:text-[#E4E2DC] disabled:opacity-50"
           >
             {requeueBusy ? "Re-queuing…" : "↺ Re-queue all open tasks"}
           </button>

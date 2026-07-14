@@ -14,10 +14,10 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 const METRIC_STYLE = [
-  { color: "#8A5BD0", bg: "#F3ECFB", border: "#E3D5F4" },
-  { color: "#BC8638", bg: "#FAF1DC", border: "#EDDEBE" },
-  { color: "#3C6FB0", bg: "#E9F0F9", border: "#D3E0F1" },
-  { color: "#C75F3F", bg: "#FBEAE2", border: "#F2D6CA" },
+  { color: "#B48FF0", bg: "#1E1830", border: "#1E1830" },
+  { color: "#F3B24C", bg: "#2A2413", border: "#2A2413" },
+  { color: "#5C8DF0", bg: "#141F30", border: "#141F30" },
+  { color: "#C2F24C", bg: "#2A1613", border: "#2A1613" },
 ];
 
 export default async function Dashboard() {
@@ -36,8 +36,8 @@ export default async function Dashboard() {
       <div className="mx-auto max-w-[1180px] px-4 sm:px-8">
         {/* BRIEFING HERO */}
         <div
-          className="mt-5 rounded-[22px] border border-[#EFE2D8] p-6 shadow-hero sm:mt-[30px] sm:p-[36px]"
-          style={{ background: "linear-gradient(135deg,#FFFFFF 0%,#FFF7F1 55%,#FCF0F4 100%)" }}
+          className="mt-5 rounded-[22px] border border-[#23272F] p-6 shadow-hero sm:mt-[30px] sm:p-[36px]"
+          style={{ background: "linear-gradient(160deg,#16181D 0%,#131519 60%,#121317 100%)" }}
         >
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
             <div className="min-w-0 flex-1">
@@ -45,7 +45,7 @@ export default async function Dashboard() {
               <h1 className="m-0 mb-4 font-display text-[32px] font-extrabold leading-[1.05] tracking-[-0.025em] text-ink sm:text-[42px] sm:leading-[1.02]">
                 {d.briefing.greeting}
               </h1>
-              <p className="m-0 max-w-[660px] text-[15px] leading-[1.6] text-[#5B5346] sm:text-[17px] sm:leading-[1.62]">
+              <p className="m-0 max-w-[660px] text-[15px] leading-[1.6] text-[#A7ACB4] sm:text-[17px] sm:leading-[1.62]">
                 {d.briefing.text}
               </p>
               {d.briefing.focus.length > 0 && (
@@ -57,7 +57,7 @@ export default async function Dashboard() {
                     <span
                       key={i}
                       className="rounded-[9px] border px-[13px] py-[7px] text-[13px] font-semibold text-accent"
-                      style={{ background: "#C75F3F12", borderColor: "#C75F3F33" }}
+                      style={{ background: "#C2F24C12", borderColor: "#C2F24C33" }}
                     >
                       {f}
                     </span>
@@ -166,12 +166,12 @@ export default async function Dashboard() {
               <div className="mt-2">
                 {d.todayAgenda.length ? (
                   d.todayAgenda.map((it) => {
-                    const dot = it.overdue ? "#C04A2E" : it.kind === "event" ? "#3C6FB0" : "#BC8638";
+                    const dot = it.overdue ? "#FF6A45" : it.kind === "event" ? "#5C8DF0" : "#F3B24C";
                     const row = (
                       <>
                         <span
                           className="w-[58px] shrink-0 text-right font-mono text-[11px]"
-                          style={{ color: it.overdue ? "#C04A2E" : "#8A8069" }}
+                          style={{ color: it.overdue ? "#FF6A45" : "#71767F" }}
                         >
                           {it.timeText}
                         </span>
@@ -294,7 +294,7 @@ export default async function Dashboard() {
         <div className="mt-9 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
           <Card className="px-5 py-6 sm:px-7">
             <SectionHeader index="07" title="Inbox" note="— triaged, awaiting your OK" />
-            <div className="my-3.5 flex items-center gap-[7px] rounded-[8px] bg-[#E9F3EC] px-[11px] py-[7px] text-[12px] text-good">
+            <div className="my-3.5 flex items-center gap-[7px] rounded-[8px] bg-[#122A20] px-[11px] py-[7px] text-[12px] text-good">
               <span className="h-1.5 w-1.5 rounded-full bg-good" />
               I summarize and draft, but never send without your confirmation.
             </div>
@@ -311,7 +311,7 @@ export default async function Dashboard() {
                     {e.actions.map((act, i) => (
                       <button
                         key={i}
-                        className="rounded-[8px] border border-[#E7E0D2] bg-[#F8F5EF] px-3 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:bg-card hover:text-[#3F3A32]"
+                        className="rounded-[8px] border border-[#23272F] bg-[#191C22] px-3 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-[#3A3F47] hover:bg-card hover:text-[#E4E2DC]"
                       >
                         {act}
                       </button>

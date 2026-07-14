@@ -81,7 +81,7 @@ export function AddTask({ variant }: { variant: "todo" | "delegated" }) {
       <button
         type="submit"
         disabled={busy || !title.trim()}
-        className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-white shadow-accent transition hover:brightness-105 disabled:opacity-50"
+        className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-[#0C0D10] shadow-accent transition hover:brightness-105 disabled:opacity-50"
       >
         {busy ? "Adding…" : "Add"}
       </button>

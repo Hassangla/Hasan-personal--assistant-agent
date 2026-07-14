@@ -132,8 +132,8 @@ export function TaskItem({
   }
 
   const titleStyle = gone
-    ? { color: "#A99F8C", textDecoration: "line-through" as const }
-    : { color: "#322E27" };
+    ? { color: "#71767F", textDecoration: "line-through" as const }
+    : { color: "#F3F1EC" };
   const iconBtn =
     "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] text-[12px] text-ink3 transition hover:bg-line2";
 
@@ -152,7 +152,7 @@ export function TaskItem({
           title="Mark complete"
           aria-label="Mark complete"
           disabled={!!gone}
-          style={{ borderColor: "#CFC6B3" }}
+          style={{ borderColor: "#3A3F47" }}
           className="h-[21px] w-[21px] shrink-0 cursor-pointer rounded-full border-2 bg-transparent transition hover:border-good"
         />
       )}
@@ -236,7 +236,7 @@ export function TaskItem({
           <button
             type="submit"
             disabled={busy || !delegateName.trim()}
-            className="rounded-[7px] bg-accent px-2 py-1 text-[11px] font-bold text-white disabled:opacity-50"
+            className="rounded-[7px] bg-accent px-2 py-1 text-[11px] font-bold text-[#0C0D10] disabled:opacity-50"
           >
             →
           </button>
@@ -294,14 +294,14 @@ export function TaskItem({
               onClick={() => toggleClItem(c.id, eff)}
               title={eff ? "Mark not done" : "Mark done"}
               className={`flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition ${
-                eff ? "border-good bg-good text-white" : "border-[#CFC6B3] bg-transparent hover:border-good"
+                eff ? "border-good bg-good text-white" : "border-[#3A3F47] bg-transparent hover:border-good"
               }`}
             >
               {eff ? "✓" : ""}
             </button>
             <span
               className="min-w-0 flex-1 truncate"
-              style={eff ? { color: "#A99F8C", textDecoration: "line-through" } : { color: "#4A4538" }}
+              style={eff ? { color: "#71767F", textDecoration: "line-through" } : { color: "#C7CBD1" }}
             >
               {c.title}
             </span>

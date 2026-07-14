@@ -144,7 +144,7 @@ export function PeopleImport() {
         <button
           onClick={() => fileRef.current?.click()}
           disabled={busy}
-          className="ml-auto rounded-[9px] bg-accent px-3.5 py-2 text-[12.5px] font-bold text-white shadow-accent transition hover:brightness-105 disabled:opacity-50"
+          className="ml-auto rounded-[9px] bg-accent px-3.5 py-2 text-[12.5px] font-bold text-[#0C0D10] shadow-accent transition hover:brightness-105 disabled:opacity-50"
         >
           {busy && !items ? "Reading…" : "Choose .vcf file"}
         </button>
@@ -168,12 +168,12 @@ export function PeopleImport() {
           <div className="max-h-[380px] overflow-y-auto rounded-[10px] border border-line2">
             {items.map((i) => (
               <div key={i.idx} className={`flex items-center gap-2.5 border-b border-line2 px-3 py-2 ${i.include ? "" : "opacity-45"}`}>
-                <input type="checkbox" checked={i.include} onChange={() => toggle(i.idx)} className="h-4 w-4 accent-[#C75F3F]" />
+                <input type="checkbox" checked={i.include} onChange={() => toggle(i.idx)} className="h-4 w-4 accent-[#C2F24C]" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-[13.5px] font-semibold text-inkstrong">{i.name}</span>
                     {i.decision === "merge" && (
-                      <span className="shrink-0 rounded-[5px] bg-[#3C6FB016] px-1.5 py-0.5 font-mono text-[9.5px] font-semibold text-blue">
+                      <span className="shrink-0 rounded-[5px] bg-[#5C8DF016] px-1.5 py-0.5 font-mono text-[9.5px] font-semibold text-blue">
                         merges → {i.matchName}
                       </span>
                     )}
@@ -201,7 +201,7 @@ export function PeopleImport() {
             <button
               onClick={commit}
               disabled={busy || selected === 0}
-              className="rounded-[9px] bg-accent px-4 py-2 text-[13px] font-bold text-white shadow-accent disabled:opacity-50"
+              className="rounded-[9px] bg-accent px-4 py-2 text-[13px] font-bold text-[#0C0D10] shadow-accent disabled:opacity-50"
             >
               {busy ? "Importing…" : `Import ${selected} contact${selected === 1 ? "" : "s"}`}
             </button>

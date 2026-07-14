@@ -17,12 +17,12 @@ export function initialsOf(name: string): string {
 
 // Follow-up / task state → category color.
 export const STATE_COLOR: Record<string, string> = {
-  due: "#C75F3F",
-  reminded: "#BC8638",
-  ontime: "#2E8C61",
-  waiting: "#3C6FB0",
-  open: "#828A98",
-  done: "#2E8C61",
+  due: "#C2F24C",
+  reminded: "#F3B24C",
+  ontime: "#43D3A2",
+  waiting: "#5C8DF0",
+  open: "#8B9099",
+  done: "#43D3A2",
 };
 
 export function Card({
@@ -43,7 +43,7 @@ export function Card({
 
 export function Eyebrow({
   children,
-  color = "#C75F3F",
+  color = "#C2F24C",
   className = "",
 }: {
   children: ReactNode;

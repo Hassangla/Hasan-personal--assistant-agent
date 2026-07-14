@@ -37,8 +37,8 @@ export function Toaster() {
           style={{ animation: "pa-toast-in 0.22s ease-out" }}
           className={`pointer-events-auto max-w-[92vw] rounded-[12px] border px-4 py-2.5 text-[13px] font-semibold shadow-[0_10px_30px_-10px_rgba(60,45,30,0.45)] backdrop-blur ${
             t.kind === "err"
-              ? "border-[#E7C0B4] bg-[#FDF1EC] text-danger"
-              : "border-[#DDE8DC] bg-[#F0F7EF] text-good"
+              ? "border-[#2A1613] bg-[#2A1613] text-danger"
+              : "border-[#122A20] bg-[#122A20] text-good"
           }`}
         >
           {t.message}

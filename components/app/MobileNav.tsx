@@ -27,7 +27,7 @@ export function MobileNav({ pendingCount = 0 }: { pendingCount?: number }) {
 
   const item = (active: boolean) =>
     `flex flex-1 flex-col items-center gap-0.5 rounded-[10px] py-1.5 no-underline transition ${
-      active ? "text-accent" : "text-[#8C8474]"
+      active ? "text-accent" : "text-[#9AA0A8]"
     }`;
 
   return (
@@ -41,13 +41,13 @@ export function MobileNav({ pendingCount = 0 }: { pendingCount?: number }) {
               href={m.href}
               onClick={() => setMore(false)}
               className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[14px] font-semibold no-underline ${
-                pathname === m.href ? "bg-[#C75F3F14] text-accent" : "text-ink2 hover:bg-cardalt"
+                pathname === m.href ? "bg-[#C2F24C14] text-accent" : "text-ink2 hover:bg-cardalt"
               }`}
             >
               <span className="text-[16px]">{m.glyph}</span>
               {m.label}
               {m.badge > 0 && (
-                <span className="ml-auto rounded-full bg-[#C75F3F18] px-2 py-px font-mono text-[11px] font-semibold text-accent">
+                <span className="ml-auto rounded-full bg-[#C2F24C18] px-2 py-px font-mono text-[11px] font-semibold text-accent">
                   {m.badge}
                 </span>
               )}
@@ -57,7 +57,7 @@ export function MobileNav({ pendingCount = 0 }: { pendingCount?: number }) {
       )}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-1 border-t border-[#E5DECF] bg-[rgba(244,241,234,0.96)] px-2 shadow-[0_-8px_24px_-14px_rgba(60,45,30,0.4)] backdrop-blur-[10px] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-1 border-t border-[#202329] bg-[rgba(12,13,16,0.96)] px-2 shadow-[0_-8px_24px_-14px_rgba(60,45,30,0.4)] backdrop-blur-[10px] md:hidden"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 6px)", paddingTop: "6px" }}
       >
         {main.map((m) => {

@@ -1,18 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 html,
 body {
-  background-color: #f4f1ea;
-  color: #221f1a;
+  background-color: #0c0d10;
+  color: #f3f1ec;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Mission Control canvas — a faint lime aurora in the top-right. */
+body {
+  background-image: radial-gradient(1200px 520px at 78% -8%, rgba(194, 242, 76, 0.06), transparent 60%);
+  background-attachment: fixed;
 }
 
 /* Toast slide-in. */
@@ -40,8 +46,9 @@ body {
   }
 }
 
-input::placeholder {
-  color: #a99f8c;
+input::placeholder,
+textarea::placeholder {
+  color: #565b63;
 }
 
 ::-webkit-scrollbar {
@@ -52,14 +59,14 @@ input::placeholder {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #e3dbcc;
+  background: #2a2e36;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #d6ccb9;
+  background: #3a3f47;
 }
 
 ::selection {
-  background: rgba(199, 95, 63, 0.18);
-  color: #3f2a20;
+  background: rgba(194, 242, 76, 0.22);
+  color: #f3f1ec;
 }

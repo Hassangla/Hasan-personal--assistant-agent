@@ -248,7 +248,7 @@ export function CalendarSync({
   const inputCls =
     "min-w-0 flex-1 basis-full rounded-[8px] border border-line bg-card px-3 py-1.5 text-[12.5px] text-ink outline-none sm:basis-auto";
   const primaryBtn =
-    "rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-white shadow-accent transition hover:brightness-105 disabled:opacity-50";
+    "rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-[#0C0D10] shadow-accent transition hover:brightness-105 disabled:opacity-50";
   const disc =
     "ml-auto rounded-[7px] border border-line bg-card px-2.5 py-1 text-[11px] font-semibold text-ink2 transition hover:border-danger hover:text-danger disabled:opacity-50";
 
@@ -305,8 +305,8 @@ export function CalendarSync({
                 }}
                 className={`rounded-[9px] border px-2.5 py-1.5 text-[12px] font-semibold transition ${
                   on
-                    ? "border-accent bg-accent text-white shadow-accent"
-                    : "border-line bg-card text-ink2 hover:border-[#CFC6B3] hover:text-[#3F3A32]"
+                    ? "border-accent bg-accent text-[#0C0D10] shadow-accent"
+                    : "border-line bg-card text-ink2 hover:border-[#3A3F47] hover:text-[#E4E2DC]"
                 }`}
               >
                 {p.emoji && <span className="mr-1">{p.emoji}</span>}
@@ -403,13 +403,13 @@ export function CalendarSync({
         <div className="flex flex-wrap items-center gap-2">
           <a
             href={webcalUrl}
-            className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-white no-underline shadow-accent transition hover:brightness-105"
+            className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-[#0C0D10] no-underline shadow-accent transition hover:brightness-105"
           >
             Add to Apple Calendar
           </a>
           <button
             onClick={copy}
-            className="rounded-[8px] border border-line bg-card px-3 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32]"
+            className="rounded-[8px] border border-line bg-card px-3 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-[#3A3F47] hover:text-[#E4E2DC]"
           >
             {copied ? "Copied ✓" : "Copy feed URL"}
           </button>

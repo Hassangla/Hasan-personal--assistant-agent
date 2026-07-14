@@ -31,7 +31,7 @@ export function Clock({ tz, mode }: { tz: string; mode: "header" | "hero" }) {
         <span className="hidden whitespace-nowrap xl:inline" suppressHydrationWarning>
           {date}
         </span>
-        <span className="hidden text-[#C8C0B0] xl:inline">·</span>
+        <span className="hidden text-[#565B63] xl:inline">·</span>
         <span className="whitespace-nowrap text-inkstrong" suppressHydrationWarning>
           {time}
         </span>
@@ -46,7 +46,7 @@ export function Clock({ tz, mode }: { tz: string; mode: "header" | "hero" }) {
         suppressHydrationWarning
       >
         {time}
-        <span className="align-super text-[14px] font-semibold text-[#C0B7A5] sm:text-[18px]"> {sec}</span>
+        <span className="align-super text-[14px] font-semibold text-[#565B63] sm:text-[18px]"> {sec}</span>
       </div>
       <div className="mt-2 font-mono text-[10px] tracking-[0.12em] text-ink3">{tzLabel}</div>
     </div>
