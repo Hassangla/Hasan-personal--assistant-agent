@@ -19,6 +19,7 @@ export type TodayTask = {
   goalTitle: string | null;
   checklist: { done: number; total: number; items: ChecklistPreviewItem[] } | null;
   stage: "todo" | "doing";
+  boardPos: number;
 };
 export type DoneTask = { id: string; title: string; area: string | null; completedIso: string | null };
 export type GoalProgress = { id: string; title: string; horizon: string; done: number; total: number };
@@ -152,7 +153,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     sb
       .from("tasks")
       .select(
-        "id,title,status,due_at,priority_score,urgency,area_id,person_id,delegated_to,nudge_count,last_nudged_at,updated_at,goal_id,board_stage",
+        "id,title,status,due_at,priority_score,urgency,area_id,person_id,delegated_to,nudge_count,last_nudged_at,updated_at,goal_id,board_stage,board_position",
       )
       .eq("user_id", USER_ID)
       .in("status", OPEN)
@@ -259,6 +260,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     goalTitle: t.goal_id ? plansById.get(t.goal_id)?.title ?? null : null,
     checklist: checklistByTask.get(t.id) ?? null,
     stage: t.board_stage === "doing" ? ("doing" as const) : ("todo" as const),
+    boardPos: typeof t.board_position === "number" ? t.board_position : 0,
   }));
 
   const recentDone: DoneTask[] = ((doneRes.data ?? []) as any[]).map((t) => ({
