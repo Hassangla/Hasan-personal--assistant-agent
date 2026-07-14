@@ -117,7 +117,7 @@ export function ChatThread() {
                   <div
                     className={`max-w-[86%] whitespace-pre-wrap rounded-[16px] px-3.5 py-2.5 text-[14px] leading-normal sm:max-w-[70%] ${
                       mine
-                        ? "rounded-br-[5px] bg-accent text-white shadow-accent"
+                        ? "rounded-br-[5px] bg-accent text-[#0C0D10] shadow-accent"
                         : "rounded-bl-[5px] border border-line bg-card text-ink"
                     }`}
                   >
@@ -140,7 +140,7 @@ export function ChatThread() {
       {/* COMPOSER */}
       <form
         onSubmit={send}
-        className="flex shrink-0 items-end gap-2 border-t border-line bg-[rgba(244,241,234,0.96)] px-3 py-2.5 sm:px-6"
+        className="flex shrink-0 items-end gap-2 border-t border-line bg-[rgba(12,13,16,0.96)] px-3 py-2.5 sm:px-6"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 10px)" }}
       >
         <textarea
@@ -155,12 +155,12 @@ export function ChatThread() {
           rows={1}
           enterKeyHint="send"
           placeholder="Message your agent…"
-          className="max-h-[120px] min-h-[44px] min-w-0 flex-1 resize-none rounded-[14px] border border-line bg-card px-3.5 py-[11px] text-[16px] text-ink outline-none placeholder:text-inkfaint focus:border-[#CFC6B3]"
+          className="max-h-[120px] min-h-[44px] min-w-0 flex-1 resize-none rounded-[14px] border border-line bg-card px-3.5 py-[11px] text-[16px] text-ink outline-none placeholder:text-inkfaint focus:border-[#3A3F47]"
         />
         <button
           type="submit"
           disabled={busy || !text.trim()}
-          className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-accent text-[17px] text-white shadow-accent transition hover:brightness-105 disabled:opacity-40"
+          className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-accent text-[17px] text-[#0C0D10] shadow-accent transition hover:brightness-105 disabled:opacity-40"
           title="Send"
           aria-label="Send"
         >

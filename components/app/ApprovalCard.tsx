@@ -55,11 +55,11 @@ export function ApprovalCard({ a }: { a: Approval }) {
       <div className="mt-1 text-[14px] leading-normal text-ink2">{a.why}</div>
 
       {a.preview && (
-        <div className="mt-3.5 rounded-[12px] border border-[#F0EADD] bg-cardalt px-4 py-3.5">
-          <div className="mb-[7px] font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#B0A795]">
+        <div className="mt-3.5 rounded-[12px] border border-[#1E2127] bg-cardalt px-4 py-3.5">
+          <div className="mb-[7px] font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#71767F]">
             {a.previewLabel}
           </div>
-          <p className="m-0 whitespace-pre-wrap text-[14px] italic leading-normal text-[#4F483D]">{a.preview}</p>
+          <p className="m-0 whitespace-pre-wrap text-[14px] italic leading-normal text-[#A7ACB4]">{a.preview}</p>
         </div>
       )}
 
@@ -73,14 +73,14 @@ export function ApprovalCard({ a }: { a: Approval }) {
         </button>
         <button
           disabled={!!busy}
-          className="rounded-[10px] border border-[#E2DAC9] bg-card px-[18px] py-[9px] text-[13px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32] disabled:opacity-50"
+          className="rounded-[10px] border border-[#2A2E36] bg-card px-[18px] py-[9px] text-[13px] font-semibold text-ink2 transition hover:border-[#3A3F47] hover:text-[#E4E2DC] disabled:opacity-50"
         >
           Edit first
         </button>
         <button
           onClick={() => resolve("deny")}
           disabled={!!busy}
-          className="ml-auto rounded-[10px] bg-transparent px-3.5 py-[9px] text-[13px] font-semibold text-[#B26B5A] transition hover:text-danger disabled:opacity-50"
+          className="ml-auto rounded-[10px] bg-transparent px-3.5 py-[9px] text-[13px] font-semibold text-[#FF6A45] transition hover:text-danger disabled:opacity-50"
         >
           {busy === "deny" ? "Denying…" : "Deny"}
         </button>

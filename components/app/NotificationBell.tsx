@@ -99,7 +99,7 @@ export function NotificationBell() {
       >
         🔔
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-bold text-[#0C0D10]">
             {unread > 9 ? "9+" : unread}
           </span>
         )}

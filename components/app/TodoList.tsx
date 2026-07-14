@@ -63,7 +63,7 @@ export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: Done
   const slice = filtered.slice(cur * PAGE_SIZE, (cur + 1) * PAGE_SIZE);
 
   const navBtn =
-    "rounded-[8px] border border-line bg-card px-2.5 py-1 font-mono text-[11px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32] disabled:cursor-default disabled:opacity-35";
+    "rounded-[8px] border border-line bg-card px-2.5 py-1 font-mono text-[11px] font-semibold text-ink2 transition hover:border-[#3A3F47] hover:text-[#E4E2DC] disabled:cursor-default disabled:opacity-35";
   const viewBtn = (active: boolean) =>
     `rounded-[7px] px-2 py-1 font-mono text-[11px] font-semibold transition ${
       active ? "bg-card text-ink shadow-[0_1px_3px_rgba(60,45,30,0.15)]" : "text-ink3 hover:text-ink"

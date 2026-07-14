@@ -331,7 +331,7 @@ export function TaskDetailPanel() {
                     <button
                       onClick={() => saveDue(dueInput)}
                       disabled={busy || !dueInput}
-                      className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+                      className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-bold text-[#0C0D10] disabled:opacity-50"
                     >
                       Save
                     </button>
@@ -339,7 +339,7 @@ export function TaskDetailPanel() {
                       <button
                         onClick={() => saveDue("")}
                         disabled={busy}
-                        className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-[#B26B5A] disabled:opacity-50"
+                        className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-[#FF6A45] disabled:opacity-50"
                       >
                         Clear
                       </button>
@@ -360,7 +360,7 @@ export function TaskDetailPanel() {
                     <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-line2">
                       <div
                         className="h-full rounded-full transition-[width]"
-                        style={{ width: `${pct}%`, background: overdue ? "#C04A2E" : "#2E8C61" }}
+                        style={{ width: `${pct}%`, background: overdue ? "#FF6A45" : "#43D3A2" }}
                       />
                     </div>
                     <div className="mt-1 font-mono text-[10px] text-inkfaint">created {fmtDate(d.createdIso)}</div>
@@ -444,14 +444,14 @@ export function TaskDetailPanel() {
                             disabled={clBusy}
                             title={c.done ? "Mark not done" : "Mark done"}
                             className={`flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full border-2 text-[10px] font-bold transition ${
-                              c.done ? "border-good bg-good text-white" : "border-[#CFC6B3] bg-transparent hover:border-good"
+                              c.done ? "border-good bg-good text-white" : "border-[#3A3F47] bg-transparent hover:border-good"
                             }`}
                           >
                             {c.done ? "✓" : ""}
                           </button>
                           <span
                             className="min-w-0 flex-1 truncate"
-                            style={c.done ? { color: "#A99F8C", textDecoration: "line-through" } : { color: "#322E27" }}
+                            style={c.done ? { color: "#71767F", textDecoration: "line-through" } : { color: "#F3F1EC" }}
                           >
                             {c.title}
                           </span>
@@ -507,7 +507,7 @@ export function TaskDetailPanel() {
                   <button
                     type="submit"
                     disabled={clBusy || !clTitle.trim()}
-                    className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+                    className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-bold text-[#0C0D10] disabled:opacity-50"
                   >
                     {clBusy ? "…" : "Add"}
                   </button>
@@ -558,7 +558,7 @@ export function TaskDetailPanel() {
                 <button
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
-                  className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-[#CFC6B3] hover:text-[#3F3A32] disabled:opacity-50"
+                  className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-[#3A3F47] hover:text-[#E4E2DC] disabled:opacity-50"
                 >
                   {uploading ? "Working…" : "＋ Attach file"}
                 </button>
@@ -596,7 +596,7 @@ export function TaskDetailPanel() {
                   <button
                     type="submit"
                     disabled={busy || !panelDelegateName.trim()}
-                    className="rounded-[9px] bg-accent px-3 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                    className="rounded-[9px] bg-accent px-3 py-2 text-[13px] font-bold text-[#0C0D10] disabled:opacity-50"
                   >
                     →
                   </button>
@@ -625,7 +625,7 @@ export function TaskDetailPanel() {
                 <button
                   onClick={() => setConfirmDel(true)}
                   disabled={busy}
-                  className="ml-auto rounded-[9px] px-3.5 py-2 text-[13px] font-semibold text-[#B26B5A] transition hover:text-danger"
+                  className="ml-auto rounded-[9px] px-3.5 py-2 text-[13px] font-semibold text-[#FF6A45] transition hover:text-danger"
                 >
                   🗑 Delete
                 </button>

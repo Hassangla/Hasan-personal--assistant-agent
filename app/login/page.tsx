@@ -50,7 +50,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading || !password}
-          className="mt-4 w-full rounded-[11px] bg-accent px-3 py-2.5 text-[13px] font-bold text-white shadow-accent transition hover:brightness-105 disabled:opacity-50"
+          className="mt-4 w-full rounded-[11px] bg-accent px-3 py-2.5 text-[13px] font-bold text-[#0C0D10] shadow-accent transition hover:brightness-105 disabled:opacity-50"
         >
           {loading ? "Checking…" : "Enter"}
         </button>

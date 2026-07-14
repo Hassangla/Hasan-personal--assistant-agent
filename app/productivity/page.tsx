@@ -36,12 +36,12 @@ export default async function ProductivityPage() {
 
         {/* STATS */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Stat value={d.completedWeek} label="Completed · 7 days" sub={`${d.completedToday} today · ${d.completedTotal} all-time`} color="#2E8C61" />
+          <Stat value={d.completedWeek} label="Completed · 7 days" sub={`${d.completedToday} today · ${d.completedTotal} all-time`} color="#43D3A2" />
           <Stat value={`${d.completionRate}%`} label="Completion rate" sub="done vs open + dropped" color="#3F9A6E" />
-          <Stat value={d.overdue} label="Overdue" sub={`${d.dueToday} due today`} color="#C04A2E" />
-          <Stat value={d.followups} label="In follow-up" sub={`avg ${d.avgNudges} nudges`} color="#BC8638" />
-          <Stat value={d.delegated} label="Delegated" sub="being chased for you" color="#3C6FB0" />
-          <Stat value={d.dropped} label="Dropped" sub="abandoned tasks" color="#828A98" />
+          <Stat value={d.overdue} label="Overdue" sub={`${d.dueToday} due today`} color="#FF6A45" />
+          <Stat value={d.followups} label="In follow-up" sub={`avg ${d.avgNudges} nudges`} color="#F3B24C" />
+          <Stat value={d.delegated} label="Delegated" sub="being chased for you" color="#5C8DF0" />
+          <Stat value={d.dropped} label="Dropped" sub="abandoned tasks" color="#8B9099" />
         </div>
 
         {/* DELAYS */}
@@ -110,16 +110,16 @@ export default async function ProductivityPage() {
 
         {/* FALLING BEHIND */}
         {d.behind.length > 0 && (
-          <Card className="mt-6 border-[#F2D6CA] bg-[#FBEAE2] px-5 pb-4 pt-6 sm:px-7">
+          <Card className="mt-6 border-[#2A1613] bg-[#2A1613] px-5 pb-4 pt-6 sm:px-7">
             <SectionHeader index="02" title="Falling behind" size={20} note="— needs attention" />
             <div className="mt-2">
               {d.behind.map((a) => (
-                <div key={a.area} className="flex items-center gap-3 border-t border-[#F2D6CA] py-2.5 text-[13px]">
+                <div key={a.area} className="flex items-center gap-3 border-t border-[#2A1613] py-2.5 text-[13px]">
                   <span style={{ background: a.color }} className="h-2 w-2 shrink-0 rounded-full" />
                   <span className="min-w-0 flex-1 truncate font-semibold" style={{ color: a.color }}>
                     {a.label}
                   </span>
-                  <span className="shrink-0 font-mono text-[11px] text-[#9A5040]">
+                  <span className="shrink-0 font-mono text-[11px] text-[#A6CC3E]">
                     {a.overdue > 0 && `${a.overdue} overdue`}
                     {a.overdue > 0 && a.escalated > 0 && " · "}
                     {a.escalated > 0 && `${a.escalated} escalated`}

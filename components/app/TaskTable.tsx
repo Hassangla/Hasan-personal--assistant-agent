@@ -117,7 +117,7 @@ export function TaskTable({ tasks }: { tasks: TodayTask[] }) {
                       type="button"
                       onClick={() => complete(t.id)}
                       title="Mark complete"
-                      style={{ borderColor: "#CFC6B3" }}
+                      style={{ borderColor: "#3A3F47" }}
                       className="h-[18px] w-[18px] cursor-pointer rounded-full border-2 bg-transparent transition hover:border-good"
                     />
                   )}
@@ -128,7 +128,7 @@ export function TaskTable({ tasks }: { tasks: TodayTask[] }) {
                     type="button"
                     onClick={() => router.push(`${pathname}?task=${t.id}`)}
                     className="block w-full truncate text-left font-medium hover:underline"
-                    style={gone ? { color: "#A99F8C", textDecoration: "line-through" } : { color: "#322E27" }}
+                    style={gone ? { color: "#71767F", textDecoration: "line-through" } : { color: "#F3F1EC" }}
                   >
                     {t.title}
                   </button>

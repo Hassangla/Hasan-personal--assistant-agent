@@ -24,9 +24,9 @@ export default async function ApprovalsPage() {
         </div>
 
         {/* TRUST BANNER */}
-        <div className="mt-5 flex items-start gap-3 rounded-[14px] border border-[#CFE6D6] bg-[#E9F3EC] px-[18px] py-[15px]">
+        <div className="mt-5 flex items-start gap-3 rounded-[14px] border border-[#122A20] bg-[#122A20] px-[18px] py-[15px]">
           <span className="mt-[5px] h-[9px] w-[9px] shrink-0 rounded-full bg-good" />
-          <p className="m-0 text-[14px] leading-[1.55] text-[#2C5C42]">
+          <p className="m-0 text-[14px] leading-[1.55] text-[#43D3A2]">
             I draft, summarize and queue — but I never send, archive or take an irreversible step until you approve it
             here. Incoming email is treated as untrusted: I read it, never let it act on its own.
           </p>
@@ -46,7 +46,7 @@ export default async function ApprovalsPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-[18px] border border-dashed border-[#DED5C4] bg-card p-11 text-center">
+          <div className="rounded-[18px] border border-dashed border-[#3A3F47] bg-card p-11 text-center">
             <div className="font-display text-[22px] font-extrabold text-inkstrong">All clear.</div>
             <div className="mt-1.5 text-[14px] text-ink3">Nothing needs your sign-off right now — go enjoy the day.</div>
           </div>
@@ -63,7 +63,7 @@ export default async function ApprovalsPage() {
               {d.log.map((l) => (
                 <div key={l.id} className="flex items-center gap-3.5 border-t border-line2 py-[13px] first:border-t-0">
                   <span style={{ background: l.color }} className="h-2 w-2 shrink-0 rounded-full" />
-                  <span className="min-w-0 flex-1 truncate text-[14px] text-[#4F483D]">{l.title}</span>
+                  <span className="min-w-0 flex-1 truncate text-[14px] text-[#A7ACB4]">{l.title}</span>
                   <span
                     style={{ color: l.color }}
                     className="font-mono text-[10px] font-semibold uppercase tracking-[0.04em]"

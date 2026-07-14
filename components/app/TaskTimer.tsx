@@ -38,7 +38,7 @@ export function TaskTimer({ dueIso }: { dueIso: string }) {
       suppressHydrationWarning
       title={overdue ? "Overdue" : "Time until deadline"}
       className="shrink-0 whitespace-nowrap rounded-[6px] px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.03em] tabular-nums"
-      style={overdue ? { color: "#C04A2E", background: "#C04A2E16" } : { color: "#2E8C61", background: "#2E8C6116" }}
+      style={overdue ? { color: "#FF6A45", background: "#FF6A4516" } : { color: "#43D3A2", background: "#43D3A216" }}
     >
       {overdue ? `▲ ${label} over` : `⏳ ${label} left`}
     </span>

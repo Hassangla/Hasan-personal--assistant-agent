@@ -46,7 +46,7 @@ export function NewGoal({ horizon }: { horizon: "short" | "medium" | "long" }) {
       <button
         type="submit"
         disabled={busy || !title.trim()}
-        className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+        className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-[#0C0D10] disabled:opacity-50"
       >
         {busy ? "…" : "Add"}
       </button>

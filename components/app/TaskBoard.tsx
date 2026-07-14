@@ -22,9 +22,9 @@ type Card = {
 };
 
 const LANES: { key: Stage; label: string; hint: string; dot: string }[] = [
-  { key: "todo", label: "To Do", hint: "queued", dot: "#BC8638" },
-  { key: "doing", label: "In Progress", hint: "underway", dot: "#3C6FB0" },
-  { key: "done", label: "Done", hint: "recent", dot: "#2E8C61" },
+  { key: "todo", label: "To Do", hint: "queued", dot: "#F3B24C" },
+  { key: "doing", label: "In Progress", hint: "underway", dot: "#5C8DF0" },
+  { key: "done", label: "Done", hint: "recent", dot: "#43D3A2" },
 ];
 
 export function TaskBoard({ tasks, done }: { tasks: TodayTask[]; done: DoneTask[] }) {
@@ -102,7 +102,7 @@ export function TaskBoard({ tasks, done }: { tasks: TodayTask[]; done: DoneTask[
               if (id) move(id, lane.key);
             }}
             className={`rounded-[14px] border p-2.5 transition ${
-              dragOver === lane.key ? "border-accent bg-[#C75F3F08]" : "border-line2 bg-cardalt"
+              dragOver === lane.key ? "border-accent bg-[#C2F24C08]" : "border-line2 bg-cardalt"
             }`}
           >
             <div className="mb-2 flex items-center gap-2 px-1">

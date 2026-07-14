@@ -13,52 +13,52 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // "Mission Control" dark command-deck palette (design handoff v0.4).
         // semantic surface + ink scale
-        page: "#F4F1EA",
-        card: "#FFFFFF",
-        cardalt: "#FBF8F2",
-        ink: "#221F1A",
-        inkstrong: "#2C2820",
-        ink2: "#6B6356",
-        ink3: "#9A9182",
-        inkfaint: "#AEA593",
-        line: "#E9E2D5",
-        line2: "#F1ECE1",
-        // brand + state
-        accent: "#C75F3F",
-        good: "#2E8C61",
-        amber: "#BC8638",
-        blue: "#3C6FB0",
-        danger: "#C04A2E",
+        page: "#0C0D10",
+        card: "#15171C",
+        cardalt: "#101115",
+        ink: "#F3F1EC",
+        inkstrong: "#F3F1EC",
+        ink2: "#A7ACB4",
+        ink3: "#71767F",
+        inkfaint: "#565B63",
+        line: "#23272F",
+        line2: "#1E2127",
+        // brand + state — accent is signal lime; text on accent is #0C0D10.
+        accent: "#C2F24C",
+        good: "#43D3A2",
+        amber: "#F3B24C",
+        blue: "#5C8DF0",
+        danger: "#FF6A45",
 
-        // --- legacy aliases (old dark tokens → warm equivalents) so any
-        // not-yet-migrated component keeps reasonable colors ---
-        bg: "#F4F1EA",
-        panel: "#FFFFFF",
-        panel2: "#FBF8F2",
-        border: "#E9E2D5",
-        borderlt: "#F1ECE1",
-        text: "#221F1A",
-        muted: "#6B6356",
-        faint: "#9A9182",
-        hot: "#C04A2E",
-        warm: "#BC8638",
-        cool: "#3C6FB0",
+        // --- legacy aliases kept pointing at the live token values ---
+        bg: "#0C0D10",
+        panel: "#15171C",
+        panel2: "#101115",
+        border: "#23272F",
+        borderlt: "#1E2127",
+        text: "#F3F1EC",
+        muted: "#A7ACB4",
+        faint: "#71767F",
+        hot: "#FF6A45",
+        warm: "#F3B24C",
+        cool: "#5C8DF0",
       },
       fontFamily: {
         // body / UI
-        sans: ["'Hanken Grotesk'", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["'IBM Plex Sans'", "ui-sans-serif", "system-ui", "sans-serif"],
         // display / headings
-        display: ["'Bricolage Grotesque'", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["'Space Grotesk'", "ui-sans-serif", "system-ui", "sans-serif"],
         // labels / timestamps
-        mono: ["'JetBrains Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
-        serif: ["'Bricolage Grotesque'", "ui-serif", "Georgia", "serif"],
+        mono: ["'IBM Plex Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        serif: ["'Space Grotesk'", "ui-serif", "Georgia", "serif"],
       },
       boxShadow: {
-        hero: "0 1px 0 rgba(0,0,0,0.02), 0 26px 50px -34px rgba(60,45,30,0.30)",
-        card: "0 1px 0 rgba(0,0,0,0.02), 0 22px 44px -34px rgba(60,45,30,0.28)",
-        soft: "0 1px 0 rgba(0,0,0,0.02), 0 14px 30px -28px rgba(60,45,30,0.3)",
-        accent: "0 4px 12px -4px #C75F3F88",
+        hero: "0 1px 0 rgba(255,255,255,0.02), 0 30px 60px -34px rgba(0,0,0,0.7)",
+        card: "0 1px 0 rgba(255,255,255,0.02), 0 24px 48px -34px rgba(0,0,0,0.6)",
+        soft: "0 1px 0 rgba(255,255,255,0.02), 0 14px 30px -28px rgba(0,0,0,0.55)",
+        accent: "0 4px 16px -4px #C2F24C55",
       },
       keyframes: {
         pulse2: {

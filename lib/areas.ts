@@ -25,12 +25,12 @@ export type AreaMeta = { canonical: string; label: string; color: string; slug: 
 
 const META: AreaMeta[] = [
   { canonical: "World Bank", label: "World Bank", color: "#2E9B8F", slug: "world-bank" },
-  { canonical: "SJD", label: "SJD", color: "#5566CC", slug: "sjd" },
-  { canonical: "GLG-Alhoot Company", label: "GLG-Alhoot", color: "#CC8A2E", slug: "glg-alhoot" },
-  { canonical: "Scorp Group Ltd.", label: "Scorp Group", color: "#C2538C", slug: "scorp-group" },
-  { canonical: "Draupnir LLC", label: "Draupnir", color: "#8A5BD0", slug: "draupnir" },
-  { canonical: "Personal", label: "Personal", color: "#3F9A6E", slug: "personal" },
-  { canonical: "Miscellaneous/Other", label: "Misc", color: "#828A98", slug: "misc" },
+  { canonical: "SJD", label: "SJD", color: "#8A96E8", slug: "sjd" },
+  { canonical: "GLG-Alhoot Company", label: "GLG-Alhoot", color: "#D69A45", slug: "glg-alhoot" },
+  { canonical: "Scorp Group Ltd.", label: "Scorp Group", color: "#D065A0", slug: "scorp-group" },
+  { canonical: "Draupnir LLC", label: "Draupnir", color: "#B48FF0", slug: "draupnir" },
+  { canonical: "Personal", label: "Personal", color: "#4FB07F", slug: "personal" },
+  { canonical: "Miscellaneous/Other", label: "Misc", color: "#8B9099", slug: "misc" },
 ];
 
 export const AREA_META: AreaMeta[] = META;

@@ -18,7 +18,7 @@ function Row({ item }: { item: ArchiveItem }) {
           {item.area && <AreaTag area={item.area} />}
           {item.delegatedTo && (
             <span
-              style={{ color: "#3C6FB0", background: "#3C6FB016" }}
+              style={{ color: "#5C8DF0", background: "#5C8DF016" }}
               className="rounded-[6px] px-2 py-1 font-mono text-[10px] font-semibold"
             >
               → {item.delegatedTo}

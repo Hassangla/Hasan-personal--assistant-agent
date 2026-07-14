@@ -63,7 +63,7 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
     }
   }
 
-  const chips = [{ canonical: "All", label: "All", color: "#7A7264" }, ...AREA_META];
+  const chips = [{ canonical: "All", label: "All", color: "#71767F" }, ...AREA_META];
 
   return (
     <>
@@ -81,7 +81,7 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
             you together. Nothing here was entered by hand.
           </p>
         </div>
-        <div className="flex w-full items-center gap-2 rounded-[12px] border border-[#E7E0D2] bg-card px-3.5 py-2.5 sm:w-auto sm:min-w-[240px]">
+        <div className="flex w-full items-center gap-2 rounded-[12px] border border-[#23272F] bg-card px-3.5 py-2.5 sm:w-auto sm:min-w-[240px]">
           <span className="font-mono text-[14px] text-inkfaint">⌕</span>
           <input
             value={q}
@@ -103,8 +103,8 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
               className="inline-flex items-center gap-[7px] rounded-[20px] border px-[13px] py-1.5 text-[12.5px] font-semibold transition hover:-translate-y-px"
               style={{
                 color: ch.color,
-                background: on ? ch.color + "18" : "#FFFFFF",
-                borderColor: on ? ch.color + "66" : "#EAE3D5",
+                background: on ? ch.color + "18" : "#101115",
+                borderColor: on ? ch.color + "66" : "#1E2127",
               }}
             >
               <span style={{ background: ch.color }} className="h-[7px] w-[7px] rounded-full" />
@@ -128,8 +128,8 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
                   onClick={() => setSelId(c.id)}
                   className="flex items-center gap-3 rounded-[14px] border p-[13px] text-left transition hover:-translate-y-[2px]"
                   style={{
-                    background: on ? m.color + "12" : "#FFFFFF",
-                    borderColor: on ? m.color + "55" : "#EDE6D9",
+                    background: on ? m.color + "12" : "#101115",
+                    borderColor: on ? m.color + "55" : "#1E2127",
                   }}
                 >
                   <span
@@ -196,7 +196,7 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
                     setDEmail(selected.email);
                     setDMsg(null);
                   }}
-                  className="flex-1 rounded-[10px] bg-accent px-4 py-[9px] text-[13px] font-bold text-white shadow-accent transition hover:brightness-105 sm:flex-none"
+                  className="flex-1 rounded-[10px] bg-accent px-4 py-[9px] text-[13px] font-bold text-[#0C0D10] shadow-accent transition hover:brightness-105 sm:flex-none"
                 >
                   Delegate a task
                 </button>
@@ -225,7 +225,7 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
                   <button
                     type="submit"
                     disabled={dBusy || !dTitle.trim()}
-                    className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
+                    className="rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-[#0C0D10] disabled:opacity-50"
                   >
                     {dBusy ? "Delegating…" : "Delegate & email"}
                   </button>
@@ -238,9 +238,9 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
             {dMsg && <p className="mt-2 text-[12px] text-ink2">{dMsg}</p>}
 
             {/* what I know */}
-            <div className="mt-6 rounded-[14px] border border-[#F0EADD] bg-cardalt px-[18px] py-4">
-              <div className="mb-[7px] font-mono text-[10px] uppercase tracking-[0.1em] text-[#B0A795]">What I know</div>
-              <p className="m-0 text-[14.5px] leading-relaxed text-[#4F483D]">{selected.summary}</p>
+            <div className="mt-6 rounded-[14px] border border-[#1E2127] bg-cardalt px-[18px] py-4">
+              <div className="mb-[7px] font-mono text-[10px] uppercase tracking-[0.1em] text-[#71767F]">What I know</div>
+              <p className="m-0 text-[14.5px] leading-relaxed text-[#A7ACB4]">{selected.summary}</p>
             </div>
 
             {/* stats */}
@@ -250,7 +250,7 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
                 { n: selected.stats.tasks, l: "linked tasks" },
                 { n: selected.stats.since, l: "first seen" },
               ].map((s, i) => (
-                <div key={i} className="rounded-[12px] border border-[#EDE6D9] px-4 py-3.5">
+                <div key={i} className="rounded-[12px] border border-[#1E2127] px-4 py-3.5">
                   <div className="font-display text-[24px] font-extrabold leading-none text-inkstrong">{s.n}</div>
                   <div className="mt-[7px] font-mono text-[10px] uppercase tracking-[0.06em] text-ink3">{s.l}</div>
                 </div>
@@ -260,7 +260,7 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
             {/* history */}
             {selected.timeline.length > 0 && (
               <div className="mt-[26px]">
-                <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-[#B0A795]">History</div>
+                <div className="mb-3.5 font-mono text-[11px] uppercase tracking-[0.1em] text-[#71767F]">History</div>
                 {selected.timeline.map((h, i) => {
                   const m = areaMeta(selected.area);
                   return (
@@ -272,7 +272,7 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
                         className="mt-1.5 h-[9px] w-[9px] shrink-0 rounded-full"
                         style={{ background: m.color, boxShadow: `0 0 0 4px ${m.color}1f` }}
                       />
-                      <span className="flex-1 text-[14px] leading-snug text-[#4F483D]">{h.text}</span>
+                      <span className="flex-1 text-[14px] leading-snug text-[#A7ACB4]">{h.text}</span>
                     </div>
                   );
                 })}
@@ -282,13 +282,13 @@ export function PeopleBrowser({ contacts }: { contacts: PeopleContact[] }) {
             {/* related */}
             {selected.related.length > 0 && (
               <div className="mt-[22px]">
-                <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.1em] text-[#B0A795]">
+                <div className="mb-3 font-mono text-[11px] uppercase tracking-[0.1em] text-[#71767F]">
                   Open items together
                 </div>
                 {selected.related.map((r, i) => (
                   <div
                     key={i}
-                    className="mb-2 flex items-center gap-3 rounded-[12px] border border-[#F0EADD] bg-cardalt px-3.5 py-[11px]"
+                    className="mb-2 flex items-center gap-3 rounded-[12px] border border-[#1E2127] bg-cardalt px-3.5 py-[11px]"
                   >
                     <span className="flex-1 text-[14px] font-medium text-inkstrong">{r.title}</span>
                     <span

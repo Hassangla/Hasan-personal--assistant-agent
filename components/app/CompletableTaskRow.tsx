@@ -79,21 +79,21 @@ export function CompletableTaskRow({
       onClick={complete}
       title={layout === "chaseOthers" ? "Confirm finished" : "Mark done"}
       aria-label={layout === "chaseOthers" ? "Confirm finished" : "Mark task done"}
-      style={{ width: size, height: size, borderColor: failed ? "#C04A2E" : "#CFC6B3" }}
+      style={{ width: size, height: size, borderColor: failed ? "#FF6A45" : "#3A3F47" }}
       className="shrink-0 cursor-pointer rounded-full border-2 bg-transparent transition hover:border-good"
     />
   );
 
   const m = area ? areaMeta(area) : null;
   const titleStyle = done
-    ? { color: "#A99F8C", textDecoration: "line-through" as const }
-    : { color: "#322E27" };
+    ? { color: "#71767F", textDecoration: "line-through" as const }
+    : { color: "#F3F1EC" };
 
   const donePill =
     layout === "chaseYou" ? (
       <span className="shrink-0 whitespace-nowrap font-mono text-[10px] font-semibold uppercase text-good">✓ Done</span>
     ) : (
-      <span className="shrink-0 whitespace-nowrap rounded-[6px] bg-[#2E8C6118] px-2 py-1 font-mono text-[10px] font-semibold uppercase text-good">
+      <span className="shrink-0 whitespace-nowrap rounded-[6px] bg-[#43D3A218] px-2 py-1 font-mono text-[10px] font-semibold uppercase text-good">
         ✓ Done
       </span>
     );
@@ -156,7 +156,7 @@ export function CompletableTaskRow({
           donePill
         ) : (
           note && (
-            <span className="shrink-0 whitespace-nowrap font-mono text-[10px]" style={{ color: noteColor || "#A99F8C" }}>
+            <span className="shrink-0 whitespace-nowrap font-mono text-[10px]" style={{ color: noteColor || "#71767F" }}>
               {note}
             </span>
           )
@@ -183,7 +183,7 @@ export function CompletableTaskRow({
         note && (
           <span
             className="shrink-0 whitespace-nowrap rounded-[6px] px-2 py-1 font-mono text-[10px] font-semibold"
-            style={{ color: noteColor || "#3C6FB0", background: (noteColor || "#3C6FB0") + "16" }}
+            style={{ color: noteColor || "#5C8DF0", background: (noteColor || "#5C8DF0") + "16" }}
           >
             {note}
           </span>
