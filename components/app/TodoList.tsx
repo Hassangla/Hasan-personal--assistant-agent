@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { TaskItem } from "@/components/app/TaskItem";
 import { TaskTable } from "@/components/app/TaskTable";
 import { TaskBoard } from "@/components/app/TaskBoard";
@@ -71,7 +72,17 @@ export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: Done
 
   return (
     <>
-      <div className="mb-1 flex justify-end">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        {view === "board" ? (
+          <Link
+            href="/board"
+            className="rounded-[8px] border border-accent/40 bg-[#C2F24C10] px-2.5 py-1 font-mono text-[11px] font-semibold text-accent no-underline transition hover:bg-[#C2F24C1F]"
+          >
+            ⤢ Focus board
+          </Link>
+        ) : (
+          <span />
+        )}
         <div className="inline-flex items-center gap-0.5 rounded-[9px] bg-line2 p-0.5">
           <button type="button" onClick={() => switchView("list")} title="List view" className={viewBtn(view === "list")}>
             ≡ List

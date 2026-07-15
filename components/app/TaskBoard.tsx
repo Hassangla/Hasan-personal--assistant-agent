@@ -34,7 +34,7 @@ const LANES: { key: Stage; label: string; hint: string; dot: string }[] = [
 type Override = { stage: Stage; pos: number };
 type Drop = { lane: Stage; beforeId: string | null };
 
-export function TaskBoard({ tasks, done }: { tasks: TodayTask[]; done: DoneTask[] }) {
+export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; done: DoneTask[]; fill?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -193,7 +193,10 @@ export function TaskBoard({ tasks, done }: { tasks: TodayTask[]; done: DoneTask[
     ) : null;
 
   return (
-    <div ref={rootRef} className="-mx-2.5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div
+      ref={rootRef}
+      className={`-mx-2.5 grid grid-cols-1 gap-3 sm:grid-cols-3 ${fill ? "h-full" : ""}`}
+    >
       {LANES.map((lane) => {
         const list = laneCards(lane.key);
         const active = dragId && drop?.lane === lane.key;
@@ -201,7 +204,7 @@ export function TaskBoard({ tasks, done }: { tasks: TodayTask[]; done: DoneTask[
           <div
             key={lane.key}
             data-lane={lane.key}
-            className={`rounded-[14px] border p-2.5 transition ${
+            className={`rounded-[14px] border p-2.5 transition ${fill ? "flex min-h-0 flex-col" : ""} ${
               active ? "border-accent bg-[#C2F24C08]" : "border-line2 bg-cardalt"
             }`}
           >
@@ -213,7 +216,11 @@ export function TaskBoard({ tasks, done }: { tasks: TodayTask[]; done: DoneTask[
                 {lane.hint}
               </span>
             </div>
-            <div className="flex max-h-[440px] min-h-[64px] flex-col overflow-y-auto">
+            <div
+              className={`flex flex-col overflow-y-auto ${
+                fill ? "min-h-[120px] flex-1" : "max-h-[440px] min-h-[64px]"
+              }`}
+            >
               {list.length === 0 && !active && (
                 <div className="rounded-[10px] border border-dashed border-line px-3 py-5 text-center text-[11.5px] text-inkfaint">
                   {lane.key === "doing" ? "Drag a task here when you start it" : "Nothing here"}
