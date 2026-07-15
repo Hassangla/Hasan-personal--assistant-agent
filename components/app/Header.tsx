@@ -12,7 +12,7 @@ export function Header({
   tz,
   width = "wide",
 }: {
-  active?: "dashboard" | "chat" | "calendar" | "goals" | "people" | "approvals" | "archive" | "productivity";
+  active?: "dashboard" | "chat" | "board" | "calendar" | "goals" | "people" | "approvals" | "archive" | "productivity";
   pendingCount?: number;
   tz: string;
   width?: "wide" | "narrow";
@@ -24,6 +24,7 @@ export function Header({
   const nav: { key: NonNullable<typeof active>; label: string; href: string }[] = [
     { key: "dashboard", label: "Dashboard", href: "/" },
     { key: "chat", label: "Chat", href: "/chat" },
+    { key: "board", label: "Board", href: "/board" },
     { key: "calendar", label: "Calendar", href: "/calendar" },
     { key: "goals", label: "Goals", href: "/goals" },
     { key: "people", label: "People", href: "/people" },
