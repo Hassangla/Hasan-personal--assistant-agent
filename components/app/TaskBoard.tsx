@@ -221,6 +221,13 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
                 {lane.hint}
               </span>
             </div>
+            {/* Add-a-task pinned to the TOP of the To-Do lane so it's always
+                visible on the board — no scrolling to the bottom to find it. */}
+            {lane.key === "todo" && (
+              <div className="mb-2">
+                <BoardAddCard />
+              </div>
+            )}
             <div
               className={`flex flex-col overflow-y-auto ${
                 fill ? "min-h-[120px] flex-1" : "max-h-[440px] min-h-[64px]"
@@ -320,7 +327,6 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
                 );
               })}
               {dropLine(lane.key, null)}
-              {lane.key === "todo" && <BoardAddCard />}
             </div>
           </div>
         );
