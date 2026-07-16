@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const sb = supabaseAdmin();
   const { data: t } = await sb
     .from("tasks")
-    .select("id,title,description,status,due_at,created_at,area_id,goal_id,delegated_to,nudge_count")
+    .select("id,title,description,status,due_at,created_at,area_id,goal_id,delegated_to,nudge_count,labels")
     .eq("id", id)
     .eq("user_id", USER_ID)
     .maybeSingle();
@@ -88,6 +88,7 @@ export async function GET(req: Request) {
       goal: (goalRes.data as any)?.title ?? null,
       delegatedTo: t.delegated_to ?? null,
       nudgeCount: t.nudge_count ?? 0,
+      labels: Array.isArray(t.labels) ? t.labels : [],
       lastReason: ((reasonRes.data ?? [])[0] as any)?.payload?.reason ?? null,
       files,
       checklist,

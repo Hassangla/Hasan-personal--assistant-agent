@@ -5,6 +5,7 @@ import { sendMessage } from "@/lib/telegram/client";
 import { userToday } from "@/lib/config";
 import { sendTaskOptions } from "@/lib/telegram/keyboards";
 import { AREAS } from "@/lib/areas";
+import { normalizeLabels } from "@/lib/labels";
 import { toUtcIso } from "@/lib/time";
 import { addCalendarSource } from "@/lib/calendar/import";
 
@@ -116,6 +117,11 @@ export const TOOLS: ToolDef[] = [
         next_nudge_at: { type: "string", description: "ISO-8601; when to first chase. Defaults before due_at." },
         urgency: { type: "string", enum: ["low", "normal", "high"] },
         priority_score: { type: "number" },
+        labels: {
+          type: "array",
+          description: "Optional tags: urgent, important, quick, waiting, later.",
+          items: { type: "string", enum: ["urgent", "important", "quick", "waiting", "later"] },
+        },
         subtasks: {
           type: "array",
           description:
@@ -150,6 +156,7 @@ export const TOOLS: ToolDef[] = [
           next_nudge_at: nudge,
           urgency: input.urgency ?? null,
           priority_score: input.priority_score ?? 0,
+          labels: normalizeLabels(input.labels),
           status: "open",
         })
         .select("id, title, status, due_at, next_nudge_at")

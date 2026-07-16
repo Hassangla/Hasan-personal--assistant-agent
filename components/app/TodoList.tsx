@@ -117,6 +117,7 @@ export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: Done
             dueIso={t.dueIso}
             goalTitle={t.goalTitle}
             checklist={t.checklist}
+            labels={t.labels}
           />
         ))
       )}

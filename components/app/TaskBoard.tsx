@@ -4,6 +4,8 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
+import { LabelChips } from "@/components/app/LabelPicker";
+import { BoardAddCard } from "@/components/app/BoardAddCard";
 import { toast } from "@/components/app/Toast";
 import type { TodayTask, DoneTask } from "@/lib/dashboard/queries";
 
@@ -20,6 +22,7 @@ type Card = {
   area: string | null;
   dueIso: string | null;
   checklist: { done: number; total: number } | null;
+  labels: string[];
   stage: Stage;
   pos: number;
   ord: number;
@@ -51,6 +54,7 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
       area: t.area,
       dueIso: t.dueIso,
       checklist: t.checklist ? { done: t.checklist.done, total: t.checklist.total } : null,
+      labels: t.labels ?? [],
       stage: (t.stage ?? "todo") as Stage,
       pos: t.boardPos ?? 0,
       ord: i,
@@ -63,6 +67,7 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
         area: d.area,
         dueIso: null,
         checklist: null,
+        labels: [],
         stage: "done" as Stage,
         pos: 0,
         ord: 10000 + i,
@@ -262,6 +267,11 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
                         >
                           {c.title}
                         </button>
+                        {c.labels.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <LabelChips labels={c.labels} size="xs" />
+                          </div>
+                        )}
                         <div className="mt-1.5 flex items-center gap-1.5">
                           {m && (
                             <span
@@ -310,6 +320,7 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
                 );
               })}
               {dropLine(lane.key, null)}
+              {lane.key === "todo" && <BoardAddCard />}
             </div>
           </div>
         );
