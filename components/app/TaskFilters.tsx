@@ -1,23 +1,26 @@
 "use client";
 
 import { AREA_META, areaMeta } from "@/lib/areas";
+import { TASK_LABELS } from "@/lib/labels";
 import type { TodayTask } from "@/lib/dashboard/queries";
 
 // The filter bar above the To-Do views. Area labels are the primary filter
-// (tap to toggle, multi-select); due state, checklist, and goal narrow
-// further. Works identically across List, Table, and Board.
+// (tap to toggle, multi-select); the named labels (Urgent, …), due state,
+// checklist, and goal narrow further. Works identically across List, Table,
+// and Board.
 
 export type TaskFilterState = {
   areas: string[]; // canonical area names
+  labels: string[]; // label keys
   due: "all" | "overdue" | "dated" | "undated";
   checklist: boolean;
   goal: boolean;
 };
 
-export const EMPTY_FILTERS: TaskFilterState = { areas: [], due: "all", checklist: false, goal: false };
+export const EMPTY_FILTERS: TaskFilterState = { areas: [], labels: [], due: "all", checklist: false, goal: false };
 
 export function isFiltering(f: TaskFilterState): boolean {
-  return f.areas.length > 0 || f.due !== "all" || f.checklist || f.goal;
+  return f.areas.length > 0 || f.labels.length > 0 || f.due !== "all" || f.checklist || f.goal;
 }
 
 export function applyFilters(tasks: TodayTask[], f: TaskFilterState): TodayTask[] {
@@ -27,6 +30,8 @@ export function applyFilters(tasks: TodayTask[], f: TaskFilterState): TodayTask[
       const canonical = t.area ? areaMeta(t.area).canonical : null;
       if (!canonical || !f.areas.includes(canonical)) return false;
     }
+    // Labels: match a task carrying ANY of the selected labels.
+    if (f.labels.length && !f.labels.some((l) => t.labels?.includes(l))) return false;
     if (f.due === "overdue" && !(t.dueIso && Date.parse(t.dueIso) < now)) return false;
     if (f.due === "dated" && !t.dueIso) return false;
     if (f.due === "undated" && t.dueIso) return false;
@@ -52,6 +57,12 @@ export function TaskFilters({
       ? filters.areas.filter((a) => a !== canonical)
       : [...filters.areas, canonical];
     onChange({ ...filters, areas });
+  }
+  function toggleLabel(key: string) {
+    const labels = filters.labels.includes(key)
+      ? filters.labels.filter((l) => l !== key)
+      : [...filters.labels, key];
+    onChange({ ...filters, labels });
   }
 
   const dueOpts: { key: TaskFilterState["due"]; label: string }[] = [
@@ -85,6 +96,29 @@ export function TaskFilters({
           >
             <span style={{ background: on ? "#fff" : a.color }} className="h-1.5 w-1.5 rounded-full" />
             {a.label}
+          </button>
+        );
+      })}
+
+      <span className="mx-1 h-4 w-px bg-line" />
+
+      {TASK_LABELS.map((l) => {
+        const on = filters.labels.includes(l.key);
+        return (
+          <button
+            key={l.key}
+            type="button"
+            onClick={() => toggleLabel(l.key)}
+            title={on ? `Hide ${l.name}` : `Only ${l.name}`}
+            style={
+              on
+                ? { color: l.color, background: l.color + "24", borderColor: l.color }
+                : { color: l.color, background: l.color + "10", borderColor: l.color + "35" }
+            }
+            className="inline-flex items-center gap-1 rounded-[7px] border px-2 py-1 text-[11px] font-semibold transition"
+          >
+            <span className="text-[9px]">{l.glyph}</span>
+            {l.name}
           </button>
         );
       })}

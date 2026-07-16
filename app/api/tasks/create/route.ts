@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       area: typeof body.area === "string" && body.area.trim() ? body.area.trim() : undefined,
       due_at: typeof body.due === "string" && body.due.trim() ? body.due.trim() : undefined,
       urgency: typeof body.urgency === "string" && body.urgency.trim() ? body.urgency.trim() : undefined,
+      labels: Array.isArray(body.labels) ? body.labels : undefined,
     },
     { userId: USER_ID },
   )) as Record<string, unknown>;

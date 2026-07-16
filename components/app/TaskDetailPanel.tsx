@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { areaMeta, AREA_META } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
+import { LabelPicker } from "@/components/app/LabelPicker";
+import { DeadlineField } from "@/components/app/DeadlineField";
 import { toast } from "@/components/app/Toast";
 
 type TaskFile = { id: string; name: string; size: number; mime: string | null; url: string | null };
@@ -20,6 +22,7 @@ type Detail = {
   goal: string | null;
   delegatedTo: string | null;
   nudgeCount: number;
+  labels?: string[];
   lastReason: string | null;
   files?: TaskFile[];
   checklist?: ChecklistItem[];
@@ -97,6 +100,23 @@ export function TaskDetailPanel() {
       router.refresh();
     } finally {
       setBusy(false);
+    }
+  }
+
+  // Labels toggle instantly (optimistic), then persist.
+  async function toggleLabel(next: string[]) {
+    if (!taskId) return;
+    setD((cur) => (cur ? { ...cur, labels: next } : cur));
+    try {
+      await fetch("/api/tasks/labels", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task_id: taskId, labels: next }),
+      });
+      router.refresh();
+    } catch {
+      toast("Couldn't update labels — try again", "err");
+      load();
     }
   }
 
@@ -321,33 +341,30 @@ export function TaskDetailPanel() {
                   )}
                 </div>
                 {editingDue ? (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <input
-                      type="datetime-local"
-                      value={dueInput}
-                      onChange={(e) => setDueInput(e.target.value)}
-                      className="rounded-[8px] border border-line bg-card px-2 py-1.5 text-[12px] text-ink outline-none"
-                    />
-                    <button
-                      onClick={() => saveDue(dueInput)}
-                      disabled={busy || !dueInput}
-                      className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-bold text-[#0C0D10] disabled:opacity-50"
-                    >
-                      Save
-                    </button>
-                    {d.dueIso && (
+                  <div className="flex flex-col gap-2">
+                    <DeadlineField value={dueInput} onChange={setDueInput} compact />
+                    <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => saveDue("")}
-                        disabled={busy}
-                        className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-[#FF6A45] disabled:opacity-50"
+                        onClick={() => saveDue(dueInput)}
+                        disabled={busy || !dueInput}
+                        className="rounded-[8px] bg-accent px-2.5 py-1.5 text-[12px] font-bold text-[#0C0D10] disabled:opacity-50"
                       >
-                        Clear
+                        Save
                       </button>
-                    )}
-                    <button onClick={() => setEditingDue(false)} className="px-1 text-[13px] text-ink3">
-                      ✕
-                    </button>
-                    <span className="basis-full font-mono text-[10px] text-inkfaint">
+                      {d.dueIso && (
+                        <button
+                          onClick={() => saveDue("")}
+                          disabled={busy}
+                          className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-[#FF6A45] disabled:opacity-50"
+                        >
+                          Clear
+                        </button>
+                      )}
+                      <button onClick={() => setEditingDue(false)} className="px-1 text-[13px] text-ink3">
+                        ✕
+                      </button>
+                    </div>
+                    <span className="font-mono text-[10px] text-inkfaint">
                       Synced reminders get the new alert within two sync cycles.
                     </span>
                   </div>
@@ -368,6 +385,11 @@ export function TaskDetailPanel() {
                 ) : (
                   <span className="text-[13px] text-ink3">No deadline set.</span>
                 )}
+              </div>
+
+              <div>
+                <div className={label}>Labels</div>
+                <LabelPicker value={d.labels ?? []} onChange={toggleLabel} />
               </div>
 
               <div>

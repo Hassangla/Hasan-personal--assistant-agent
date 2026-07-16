@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
+import { LabelChips } from "@/components/app/LabelPicker";
 import { toast } from "@/components/app/Toast";
 
 type StateChip = { color: string; label: string };
@@ -27,6 +28,7 @@ export function TaskItem({
   dueIso,
   goalTitle,
   checklist,
+  labels,
 }: {
   id: string;
   title: string;
@@ -38,6 +40,7 @@ export function TaskItem({
   dueIso?: string | null;
   goalTitle?: string | null;
   checklist?: ChecklistPreview | null;
+  labels?: string[] | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -169,6 +172,11 @@ export function TaskItem({
         >
           {title}
         </button>
+        {labels && labels.length > 0 && (
+          <span className="mt-0.5 flex flex-wrap items-center gap-1">
+            <LabelChips labels={labels} size="xs" />
+          </span>
+        )}
         {variant === "delegated" && who && (
           <span className="block truncate text-[11px] text-ink3">
             with {who}
