@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Clock } from "./Clock";
 import { MobileNav } from "./MobileNav";
 import { NotificationBell } from "./NotificationBell";
+import { HeaderSearch } from "./HeaderSearch";
 
 // Sticky top bar shared by every screen: agent mark + nav (with the live
 // Approvals count) + date · clock · ONLINE. On phones the brand name and the
@@ -76,7 +77,8 @@ export function Header({
           })}
         </nav>
 
-        <div className="hidden shrink-0 items-center gap-3 whitespace-nowrap font-mono text-[11px] tracking-[0.06em] text-[#9AA0A8] md:flex lg:gap-[18px]">
+        <div className="hidden shrink-0 items-center gap-3 whitespace-nowrap font-mono text-[11px] tracking-[0.06em] text-[#9AA0A8] md:flex lg:gap-3">
+          <HeaderSearch />
           <Clock tz={tz} mode="header" />
           <span className="inline-flex items-center gap-[7px] text-good">
             <span
@@ -88,8 +90,9 @@ export function Header({
           <NotificationBell />
         </div>
 
-        {/* On phones the clock cluster is hidden — bell + a compact ONLINE dot. */}
+        {/* On phones the clock cluster is hidden — search + bell + ONLINE dot. */}
         <span className="flex shrink-0 items-center gap-2.5 md:hidden">
+          <HeaderSearch />
           <NotificationBell />
           <span
             title="Agent online"
