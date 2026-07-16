@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
@@ -59,9 +59,21 @@ export function TaskBoard({
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
 
-  const firstListId = lists[0]?.id ?? null;
-  const doneListId = lists.find((l) => l.isDone)?.id ?? null;
-  const ordered = [...lists].sort((a, b) => a.position - b.position);
+  // Lists live in local state so edits (rename / recolor / reorder / add /
+  // delete / done-toggle) show INSTANTLY, independent of a server refresh. The
+  // effect re-syncs whenever the server's list data actually changes.
+  const [ll, setLl] = useState<BoardList[]>(lists);
+  const listsSig = lists.map((l) => `${l.id}:${l.name}:${l.color}:${l.position}:${l.isDone}`).join("|");
+  useEffect(() => {
+    setLl(lists);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listsSig]);
+  const patchLocal = (id: string, patch: Partial<BoardList>) =>
+    setLl((cur) => cur.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+
+  const ordered = [...ll].sort((a, b) => a.position - b.position);
+  const firstListId = ordered[0]?.id ?? null;
+  const doneListId = ll.find((l) => l.isDone)?.id ?? null;
 
   const cards: Card[] = useMemo(() => {
     const open = tasks.map((t, i) => ({
@@ -163,8 +175,8 @@ export function TaskBoard({
     }
   }
 
-  // ——— list management ———
-  async function listApi(payload: Record<string, unknown>) {
+  // ——— list management (optimistic: update local state, then persist) ———
+  async function postList(payload: Record<string, unknown>): Promise<any | null> {
     setBusy(true);
     try {
       const res = await fetch("/api/board/lists", {
@@ -172,13 +184,15 @@ export function TaskBoard({
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
+      const j = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
         toast(j.error ?? "That didn't work — try again", "err");
-        return false;
+        return null;
       }
-      router.refresh();
-      return true;
+      return j;
+    } catch {
+      toast("Network error — try again", "err");
+      return null;
     } finally {
       setBusy(false);
     }
@@ -189,9 +203,27 @@ export function TaskBoard({
   }
   async function renameList(id: string) {
     const name = nameDraft.trim();
-    const current = lists.find((l) => l.id === id)?.name;
-    if (!name || name === current) return; // no-op keeps the panel open
-    await listApi({ action: "update", id, name }); // panel stays open
+    const prev = ll.find((l) => l.id === id)?.name;
+    if (!name || name === prev) return;
+    patchLocal(id, { name }); // instant
+    const ok = await postList({ action: "update", id, name });
+    if (ok) toast("List renamed ✓");
+    else if (prev) patchLocal(id, { name: prev });
+  }
+  async function recolor(id: string, color: string) {
+    const prev = ll.find((l) => l.id === id)?.color;
+    patchLocal(id, { color }); // instant
+    const ok = await postList({ action: "update", id, color });
+    if (!ok && prev) patchLocal(id, { color: prev });
+  }
+  async function toggleDone(id: string) {
+    const cur = ll.find((l) => l.id === id);
+    if (!cur) return;
+    const next = !cur.isDone;
+    setLl((list) => list.map((l) => (l.id === id ? { ...l, isDone: next } : { ...l, isDone: next ? false : l.isDone })));
+    const ok = await postList({ action: "update", id, is_done: next });
+    if (ok) toast(next ? "This list now completes tasks ✓" : "Completion turned off");
+    else patchLocal(id, { isDone: cur.isDone });
   }
   async function moveList(id: string, dir: -1 | 1) {
     const idx = ordered.findIndex((l) => l.id === id);
@@ -199,14 +231,32 @@ export function TaskBoard({
     if (swap < 0 || swap >= ordered.length) return;
     const arr = [...ordered];
     [arr[idx], arr[swap]] = [arr[swap]!, arr[idx]!];
-    await listApi({ action: "reorder", ordered_ids: arr.map((l) => l.id) });
+    setLl(arr.map((l, i) => ({ ...l, position: i }))); // instant reindex
+    await postList({ action: "reorder", ordered_ids: arr.map((l) => l.id) });
   }
   async function addList() {
     const name = newName.trim();
-    if (!name) return;
+    if (!name || busy) return;
     setNewName("");
     setAdding(false);
-    await listApi({ action: "create", name });
+    const j = await postList({ action: "create", name });
+    if (j?.list) {
+      setLl((cur) => [
+        ...cur,
+        { id: j.list.id, name: j.list.name, color: j.list.color, position: j.list.position, isDone: !!j.list.is_done },
+      ]);
+      toast("List added ✓");
+    }
+  }
+  async function deleteList(id: string, name: string) {
+    if (!window.confirm(`Delete the "${name}" list? Its tasks move to the first list.`)) return;
+    const ok = await postList({ action: "delete", id });
+    if (ok) {
+      setLl((cur) => cur.filter((l) => l.id !== id));
+      setEditList(null);
+      toast("List deleted");
+      router.refresh(); // reconcile task fallback (their board_list_id cleared)
+    }
   }
 
   // ——— pointer drag ———
@@ -335,7 +385,7 @@ export function TaskBoard({
                     <button
                       key={c}
                       type="button"
-                      onClick={() => listApi({ action: "update", id: lane.id, color: c })}
+                      onClick={() => recolor(lane.id, c)}
                       style={{ background: c, borderColor: lane.color === c ? "#F3F1EC" : "transparent" }}
                       className="h-5 w-5 rounded-full border-2 transition hover:scale-110"
                       title="Recolor"
@@ -346,7 +396,7 @@ export function TaskBoard({
                   <input
                     type="checkbox"
                     checked={lane.isDone}
-                    onChange={() => listApi({ action: "update", id: lane.id, is_done: !lane.isDone })}
+                    onChange={() => toggleDone(lane.id)}
                     className="h-3.5 w-3.5 accent-[#43D3A2]"
                   />
                   Completes tasks dropped here
@@ -372,10 +422,7 @@ export function TaskBoard({
                   </button>
                   <button
                     type="button"
-                    onClick={async () => {
-                      if (window.confirm(`Delete the "${lane.name}" list? Its tasks move to the first list.`))
-                        await listApi({ action: "delete", id: lane.id });
-                    }}
+                    onClick={() => deleteList(lane.id, lane.name)}
                     disabled={busy}
                     className="ml-auto rounded-[6px] border border-line px-2 py-1 text-[12px] text-danger transition hover:border-danger"
                     title="Delete list"
