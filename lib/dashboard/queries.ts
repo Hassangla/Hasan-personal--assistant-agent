@@ -2,6 +2,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { USER_ID, USER_TIMEZONE } from "@/lib/config";
 import { AREA_META, areaMeta } from "@/lib/areas";
+import { getBoardLists, type BoardList } from "@/lib/dashboard/board";
 
 // All reads for the dashboard. Pure data — NEVER calls the model. Run from a
 // server component so the service-role client stays server-side.
@@ -20,6 +21,7 @@ export type TodayTask = {
   checklist: { done: number; total: number; items: ChecklistPreviewItem[] } | null;
   stage: "todo" | "doing";
   boardPos: number;
+  boardListId: string | null;
   labels: string[];
 };
 export type DoneTask = { id: string; title: string; area: string | null; completedIso: string | null };
@@ -77,6 +79,7 @@ export type DashboardData = {
   todayAgenda: TodayAgendaItem[];
   todayLabel: string;
   recentDone: DoneTask[];
+  boardLists: BoardList[];
   pendingCount: number;
 };
 
@@ -154,7 +157,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     sb
       .from("tasks")
       .select(
-        "id,title,status,due_at,priority_score,urgency,area_id,person_id,delegated_to,nudge_count,last_nudged_at,updated_at,goal_id,board_stage,board_position,labels",
+        "id,title,status,due_at,priority_score,urgency,area_id,person_id,delegated_to,nudge_count,last_nudged_at,updated_at,goal_id,board_stage,board_position,board_list_id,labels",
       )
       .eq("user_id", USER_ID)
       .in("status", OPEN)
@@ -262,6 +265,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     checklist: checklistByTask.get(t.id) ?? null,
     stage: t.board_stage === "doing" ? ("doing" as const) : ("todo" as const),
     boardPos: typeof t.board_position === "number" ? t.board_position : 0,
+    boardListId: t.board_list_id ?? null,
     labels: Array.isArray(t.labels) ? t.labels : [],
   }));
 
@@ -445,6 +449,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   ];
 
   const briefing = composeBriefing({ today, metrics, areas, chasingOthers });
+  const boardLists = await getBoardLists(USER_ID);
 
   return {
     metrics,
@@ -461,6 +466,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     todayAgenda,
     todayLabel,
     recentDone,
+    boardLists,
     pendingCount: metrics.awaitingOK,
   };
 }

@@ -8,14 +8,16 @@ import { LabelChips } from "@/components/app/LabelPicker";
 import { BoardAddCard } from "@/components/app/BoardAddCard";
 import { toast } from "@/components/app/Toast";
 import type { TodayTask, DoneTask } from "@/lib/dashboard/queries";
+import type { BoardList } from "@/lib/dashboard/board";
 
-// Trello-style board with POINTER-based drag (works with a finger on
-// iPhone/iPad and with a mouse). Grab a card by its ⠿ grip and drag it to
-// reorder within a lane or move it across lanes; a lime drop-line shows where
-// it lands, and the order persists. ‹ › arrows remain for quick lane moves.
-// Dropping into Done completes the task; dragging out of Done reopens it.
+// Trello-style board with fully customizable lists (columns): add, rename,
+// recolor, reorder, delete. Cards drag between lists and reorder within them
+// (pointer-based, works on touch via the ⠿ grip) and the order persists.
+// Dropping a card into the "done" list completes it; the ✓ button completes in
+// place. Lists scroll horizontally.
 
-type Stage = "todo" | "doing" | "done";
+const PALETTE = ["#F3B24C", "#5C8DF0", "#43D3A2", "#FF6A45", "#B48FF0", "#D065A0", "#2E9B8F", "#8B9099"];
+
 type Card = {
   id: string;
   title: string;
@@ -23,21 +25,25 @@ type Card = {
   dueIso: string | null;
   checklist: { done: number; total: number } | null;
   labels: string[];
-  stage: Stage;
+  listId: string | null;
   pos: number;
   ord: number;
+  completed: boolean;
 };
+type Override = { listId: string; pos: number };
+type Drop = { listId: string; beforeId: string | null };
 
-const LANES: { key: Stage; label: string; hint: string; dot: string }[] = [
-  { key: "todo", label: "To Do", hint: "queued", dot: "#F3B24C" },
-  { key: "doing", label: "In Progress", hint: "underway", dot: "#5C8DF0" },
-  { key: "done", label: "Done", hint: "recent", dot: "#43D3A2" },
-];
-
-type Override = { stage: Stage; pos: number };
-type Drop = { lane: Stage; beforeId: string | null };
-
-export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; done: DoneTask[]; fill?: boolean }) {
+export function TaskBoard({
+  tasks,
+  done,
+  lists,
+  fill = false,
+}: {
+  tasks: TodayTask[];
+  done: DoneTask[];
+  lists: BoardList[];
+  fill?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -47,6 +53,16 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
   const [drop, setDrop] = useState<Drop | null>(null);
   const [ghost, setGhost] = useState<{ x: number; y: number; title: string } | null>(null);
 
+  // list-management UI state
+  const [editList, setEditList] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  const firstListId = lists[0]?.id ?? null;
+  const doneListId = lists.find((l) => l.isDone)?.id ?? null;
+  const ordered = [...lists].sort((a, b) => a.position - b.position);
+
   const cards: Card[] = useMemo(() => {
     const open = tasks.map((t, i) => ({
       id: t.id,
@@ -55,124 +71,161 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
       dueIso: t.dueIso,
       checklist: t.checklist ? { done: t.checklist.done, total: t.checklist.total } : null,
       labels: t.labels ?? [],
-      stage: (t.stage ?? "todo") as Stage,
+      listId: t.boardListId ?? firstListId,
       pos: t.boardPos ?? 0,
       ord: i,
+      completed: false,
     }));
-    const doneCards = done
-      .filter((d) => !open.some((o) => o.id === d.id))
-      .map((d, i) => ({
-        id: d.id,
-        title: d.title,
-        area: d.area,
-        dueIso: null,
-        checklist: null,
-        labels: [],
-        stage: "done" as Stage,
-        pos: 0,
-        ord: 10000 + i,
-      }));
+    const openIds = new Set(open.map((o) => o.id));
+    const doneCards = doneListId
+      ? done
+          .filter((d) => !openIds.has(d.id))
+          .map((d, i) => ({
+            id: d.id,
+            title: d.title,
+            area: d.area,
+            dueIso: null,
+            checklist: null,
+            labels: [] as string[],
+            listId: doneListId,
+            pos: -1 - i, // most-recent first
+            ord: 10000 + i,
+            completed: true,
+          }))
+      : [];
     return [...open, ...doneCards];
-  }, [tasks, done]);
+  }, [tasks, done, firstListId, doneListId]);
 
-  const effStage = (c: Card): Stage => moves[c.id]?.stage ?? c.stage;
+  const effList = (c: Card): string | null => moves[c.id]?.listId ?? c.listId;
   const effPos = (c: Card): number => moves[c.id]?.pos ?? c.pos;
-  const laneCards = (lane: Stage): Card[] =>
-    cards.filter((c) => effStage(c) === lane).sort((a, b) => effPos(a) - effPos(b) || a.ord - b.ord);
+  const listCards = (listId: string): Card[] =>
+    cards.filter((c) => effList(c) === listId).sort((a, b) => effPos(a) - effPos(b) || a.ord - b.ord);
 
-  async function place(id: string, lane: Stage, beforeId: string | null) {
+  async function place(id: string, listId: string, beforeId: string | null) {
     if (busy) return;
     const card = cards.find((c) => c.id === id);
     if (!card) return;
-    const fromDone = effStage(card) === "done";
-    if (lane === effStage(card) && lane !== "done") {
-      // reorder within same lane — proceed (may be a no-op the server tolerates)
-    }
-
-    if (lane === "done") {
-      setMoves((m) => ({ ...m, [id]: { stage: "done", pos: 0 } }));
-      setBusy(true);
-      try {
-        const res = await fetch("/api/tasks/stage", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ task_id: id, stage: "done" }),
-        });
-        if (!res.ok) throw new Error();
-        toast("Task completed ✓");
-        setTimeout(() => {
-          setMoves({});
-          router.refresh();
-        }, 700);
-      } catch {
-        setMoves((m) => {
-          const n = { ...m };
-          delete n[id];
-          return n;
-        });
-        toast("Couldn't move that — try again", "err");
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-
-    const dest = laneCards(lane).filter((c) => c.id !== id);
+    const dest = listCards(listId).filter((c) => c.id !== id && !c.completed);
     let idx = beforeId ? dest.findIndex((c) => c.id === beforeId) : dest.length;
     if (idx < 0) idx = dest.length;
     const orderedIds = [...dest.slice(0, idx), card, ...dest.slice(idx)].map((c) => c.id);
 
     const optimistic: Record<string, Override> = { ...moves };
-    orderedIds.forEach((cid, k) => (optimistic[cid] = { stage: lane, pos: k }));
+    orderedIds.forEach((cid, k) => (optimistic[cid] = { listId, pos: k }));
     setMoves(optimistic);
     setBusy(true);
     try {
       const res = await fetch("/api/tasks/reorder", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ stage: lane, ordered_ids: orderedIds }),
+        body: JSON.stringify({ list_id: listId, ordered_ids: orderedIds }),
       });
       if (!res.ok) throw new Error();
-      if (fromDone) toast("Task reopened ↩");
+      if (listId === doneListId && !card.completed) toast("Task completed ✓");
+      else if (card.completed && listId !== doneListId) toast("Task reopened ↩");
       setTimeout(() => {
         setMoves({});
         router.refresh();
       }, 700);
     } catch {
       setMoves(moves);
-      toast("Couldn't reorder — try again", "err");
+      toast("Couldn't move that — try again", "err");
     } finally {
       setBusy(false);
     }
   }
 
-  function arrow(id: string, to: Stage) {
-    place(id, to, null);
+  async function complete(id: string) {
+    if (busy) return;
+    setBusy(true);
+    setMoves((m) => (doneListId ? { ...m, [id]: { listId: doneListId, pos: 0 } } : m));
+    try {
+      const res = await fetch("/api/tasks/complete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task_id: id }),
+      });
+      if (!res.ok) throw new Error();
+      toast("Task completed ✓");
+      setTimeout(() => {
+        setMoves({});
+        router.refresh();
+      }, 700);
+    } catch {
+      setMoves((m) => {
+        const n = { ...m };
+        delete n[id];
+        return n;
+      });
+      toast("Couldn't complete that — try again", "err");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // ——— list management ———
+  async function listApi(payload: Record<string, unknown>) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/board/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        toast(j.error ?? "That didn't work — try again", "err");
+        return false;
+      }
+      router.refresh();
+      return true;
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function renameList(id: string) {
+    const name = nameDraft.trim();
+    setEditList(null);
+    if (name) await listApi({ action: "update", id, name });
+  }
+  async function moveList(id: string, dir: -1 | 1) {
+    const idx = ordered.findIndex((l) => l.id === id);
+    const swap = idx + dir;
+    if (swap < 0 || swap >= ordered.length) return;
+    const arr = [...ordered];
+    [arr[idx], arr[swap]] = [arr[swap]!, arr[idx]!];
+    await listApi({ action: "reorder", ordered_ids: arr.map((l) => l.id) });
+  }
+  async function addList() {
+    const name = newName.trim();
+    if (!name) return;
+    setNewName("");
+    setAdding(false);
+    await listApi({ action: "create", name });
   }
 
   // ——— pointer drag ———
   function computeDrop(x: number, y: number): Drop | null {
     const el = document.elementFromPoint(x, y);
-    const laneEl = el?.closest("[data-lane]") as HTMLElement | null;
+    const laneEl = el?.closest("[data-list]") as HTMLElement | null;
     if (!laneEl || !rootRef.current?.contains(laneEl)) return null;
-    const lane = laneEl.getAttribute("data-lane") as Stage;
+    const listId = laneEl.getAttribute("data-list")!;
     const cardEls = Array.from(laneEl.querySelectorAll<HTMLElement>("[data-card-id]"));
     for (const ce of cardEls) {
       const cid = ce.getAttribute("data-card-id")!;
       if (cid === dragId) continue;
       const r = ce.getBoundingClientRect();
-      if (y < r.top + r.height / 2) return { lane, beforeId: cid };
+      if (y < r.top + r.height / 2) return { listId, beforeId: cid };
     }
-    return { lane, beforeId: null };
+    return { listId, beforeId: null };
   }
-
   function onGripDown(e: React.PointerEvent, card: Card) {
     if (busy) return;
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragId(card.id);
     setGhost({ x: e.clientX, y: e.clientY, title: card.title });
-    setDrop({ lane: effStage(card), beforeId: null });
+    setDrop({ listId: effList(card) ?? firstListId ?? "", beforeId: null });
   }
   function onGripMove(e: React.PointerEvent) {
     if (!dragId) return;
@@ -189,76 +242,155 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
     setDragId(null);
     setGhost(null);
     setDrop(null);
-    if (target) place(id, target.lane, target.beforeId);
+    if (target) place(id, target.listId, target.beforeId);
   }
 
-  const dropLine = (lane: Stage, beforeId: string | null) =>
-    dragId && drop?.lane === lane && drop.beforeId === beforeId ? (
+  const dropLine = (listId: string, beforeId: string | null) =>
+    dragId && drop?.listId === listId && drop.beforeId === beforeId ? (
       <div className="mx-0.5 my-1 h-[3px] rounded-full bg-accent shadow-[0_0_10px_0_#C2F24C]" />
     ) : null;
+
+  const colW = fill ? "w-[300px]" : "w-[270px]";
 
   return (
     <div
       ref={rootRef}
-      className={`-mx-2.5 grid grid-cols-1 gap-3 sm:grid-cols-3 ${fill ? "h-full" : ""}`}
+      className={`-mx-2.5 flex gap-3 overflow-x-auto px-2.5 pb-1 ${fill ? "h-full" : ""}`}
     >
-      {LANES.map((lane) => {
-        const list = laneCards(lane.key);
-        const active = dragId && drop?.lane === lane.key;
+      {ordered.map((lane) => {
+        const list = listCards(lane.id);
+        const openCount = list.filter((c) => !c.completed).length;
+        const active = dragId && drop?.listId === lane.id;
+        const editing = editList === lane.id;
+        const idx = ordered.findIndex((l) => l.id === lane.id);
         return (
           <div
-            key={lane.key}
-            data-lane={lane.key}
-            className={`rounded-[14px] border p-2.5 transition ${fill ? "flex min-h-0 flex-col" : ""} ${
+            key={lane.id}
+            data-list={lane.id}
+            className={`flex ${colW} shrink-0 flex-col rounded-[14px] border p-2.5 transition ${fill ? "min-h-0" : ""} ${
               active ? "border-accent bg-[#C2F24C08]" : "border-line2 bg-cardalt"
             }`}
           >
+            {/* header */}
             <div className="mb-2 flex items-center gap-2 px-1">
-              <span style={{ background: lane.dot }} className="h-2 w-2 rounded-full" />
-              <span className="text-[13px] font-bold text-inkstrong">{lane.label}</span>
-              <span className="font-mono text-[10px] text-inkfaint">{list.length}</span>
-              <span className="ml-auto font-mono text-[9.5px] uppercase tracking-[0.08em] text-inkfaint">
-                {lane.hint}
-              </span>
+              <span style={{ background: lane.color }} className="h-2.5 w-2.5 shrink-0 rounded-full" />
+              {editing ? (
+                <input
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onBlur={() => renameList(lane.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") renameList(lane.id);
+                    if (e.key === "Escape") setEditList(null);
+                  }}
+                  autoFocus
+                  className="min-w-0 flex-1 rounded-[6px] border border-line bg-card px-1.5 py-0.5 text-[13px] font-bold text-ink outline-none"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNameDraft(lane.name);
+                    setEditList(lane.id);
+                  }}
+                  title="Rename list"
+                  className="min-w-0 flex-1 truncate text-left text-[13px] font-bold text-inkstrong hover:underline"
+                >
+                  {lane.name}
+                </button>
+              )}
+              <span className="font-mono text-[10px] text-inkfaint">{openCount}</span>
+              <button
+                type="button"
+                onClick={() => setEditList(editing ? null : lane.id)}
+                title="List settings"
+                className="rounded-[5px] px-1 text-[13px] leading-none text-ink3 transition hover:bg-line2 hover:text-ink"
+              >
+                ⋯
+              </button>
             </div>
-            {/* Add-a-task pinned to the TOP of the To-Do lane so it's always
-                visible on the board — no scrolling to the bottom to find it. */}
-            {lane.key === "todo" && (
+
+            {/* inline list editor */}
+            {editing && (
+              <div className="mb-2 flex flex-col gap-2 rounded-[10px] border border-line2 bg-card p-2">
+                <div className="flex flex-wrap gap-1">
+                  {PALETTE.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => listApi({ action: "update", id: lane.id, color: c })}
+                      style={{ background: c, borderColor: lane.color === c ? "#F3F1EC" : "transparent" }}
+                      className="h-5 w-5 rounded-full border-2 transition hover:scale-110"
+                      title="Recolor"
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveList(lane.id, -1)}
+                    disabled={idx === 0 || busy}
+                    className="rounded-[6px] border border-line px-2 py-1 text-[12px] text-ink3 transition hover:text-ink disabled:opacity-30"
+                    title="Move left"
+                  >
+                    ‹ left
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveList(lane.id, 1)}
+                    disabled={idx === ordered.length - 1 || busy}
+                    className="rounded-[6px] border border-line px-2 py-1 text-[12px] text-ink3 transition hover:text-ink disabled:opacity-30"
+                    title="Move right"
+                  >
+                    right ›
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (window.confirm(`Delete the "${lane.name}" list? Its tasks move to the first list.`))
+                        await listApi({ action: "delete", id: lane.id });
+                    }}
+                    disabled={busy}
+                    className="ml-auto rounded-[6px] border border-line px-2 py-1 text-[12px] text-danger transition hover:border-danger"
+                    title="Delete list"
+                  >
+                    🗑
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {lane.id === firstListId && (
               <div className="mb-2">
                 <BoardAddCard />
               </div>
             )}
-            <div
-              className={`flex flex-col overflow-y-auto ${
-                fill ? "min-h-[120px] flex-1" : "max-h-[440px] min-h-[64px]"
-              }`}
-            >
+
+            <div className={`flex flex-col overflow-y-auto ${fill ? "min-h-[100px] flex-1" : "max-h-[440px] min-h-[48px]"}`}>
               {list.length === 0 && !active && (
-                <div className="rounded-[10px] border border-dashed border-line px-3 py-5 text-center text-[11.5px] text-inkfaint">
-                  {lane.key === "doing" ? "Drag a task here when you start it" : "Nothing here"}
+                <div className="rounded-[10px] border border-dashed border-line px-3 py-4 text-center text-[11.5px] text-inkfaint">
+                  Drop tasks here
                 </div>
               )}
               {list.map((c) => {
                 const m = c.area ? areaMeta(c.area) : null;
-                const isDone = c.stage === "done";
                 return (
                   <div key={c.id}>
-                    {dropLine(lane.key, c.id)}
+                    {dropLine(lane.id, c.id)}
                     <div
                       data-card-id={c.id}
                       className={`mb-2 flex items-start gap-2 rounded-[11px] border border-line bg-card p-2.5 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.5)] transition ${
                         dragId === c.id ? "opacity-30" : ""
                       }`}
                     >
-                      {/* grip — the only drag surface, so scrolling the lane still works */}
                       <button
                         type="button"
                         onPointerDown={(e) => onGripDown(e, c)}
                         onPointerMove={onGripMove}
                         onPointerUp={onGripUp}
                         onPointerCancel={onGripUp}
-                        title="Drag to reorder"
-                        aria-label="Drag to reorder"
+                        title="Drag to move / reorder"
+                        aria-label="Drag to move"
                         style={{ touchAction: "none" }}
                         className="mt-0.5 shrink-0 cursor-grab select-none px-0.5 text-[15px] leading-none text-ink3 hover:text-ink active:cursor-grabbing"
                       >
@@ -269,7 +401,7 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
                           type="button"
                           onClick={() => router.push(`${pathname}?task=${c.id}`)}
                           className={`block w-full text-left text-[13px] font-medium leading-snug hover:underline ${
-                            isDone ? "text-ink3 line-through" : "text-inkstrong"
+                            c.completed ? "text-ink3 line-through" : "text-inkstrong"
                           }`}
                         >
                           {c.title}
@@ -293,46 +425,70 @@ export function TaskBoard({ tasks, done, fill = false }: { tasks: TodayTask[]; d
                               ☑ {c.checklist.done}/{c.checklist.total}
                             </span>
                           )}
-                          {!isDone && c.dueIso && <TaskTimer dueIso={c.dueIso} />}
-                          <span className="ml-auto flex gap-0.5">
-                            {lane.key !== "todo" && (
-                              <button
-                                type="button"
-                                title={lane.key === "done" ? "Reopen → In Progress" : "Back to To Do"}
-                                onClick={() => arrow(c.id, lane.key === "done" ? "doing" : "todo")}
-                                disabled={busy}
-                                className="rounded-[6px] px-1.5 py-0.5 text-[13px] leading-none text-ink3 transition hover:bg-line2 hover:text-ink"
-                              >
-                                ‹
-                              </button>
-                            )}
-                            {lane.key !== "done" && (
-                              <button
-                                type="button"
-                                title={lane.key === "doing" ? "Complete ✓" : "Start → In Progress"}
-                                onClick={() => arrow(c.id, lane.key === "todo" ? "doing" : "done")}
-                                disabled={busy}
-                                className={`rounded-[6px] px-1.5 py-0.5 text-[13px] leading-none transition hover:bg-line2 ${
-                                  lane.key === "doing" ? "text-good" : "text-ink3 hover:text-ink"
-                                }`}
-                              >
-                                {lane.key === "doing" ? "✓" : "›"}
-                              </button>
-                            )}
-                          </span>
+                          {!c.completed && c.dueIso && <TaskTimer dueIso={c.dueIso} />}
+                          {!c.completed && (
+                            <button
+                              type="button"
+                              onClick={() => complete(c.id)}
+                              disabled={busy}
+                              title="Complete"
+                              className="ml-auto rounded-[6px] px-1.5 py-0.5 text-[12px] leading-none text-good transition hover:bg-line2"
+                            >
+                              ✓
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
                 );
               })}
-              {dropLine(lane.key, null)}
+              {dropLine(lane.id, null)}
             </div>
           </div>
         );
       })}
 
-      {/* floating ghost that follows the finger/cursor */}
+      {/* add-list column */}
+      <div className={`flex ${colW} shrink-0 flex-col`}>
+        {adding ? (
+          <div className="flex flex-col gap-2 rounded-[14px] border border-accent/40 bg-cardalt p-2.5">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addList();
+                if (e.key === "Escape") setAdding(false);
+              }}
+              placeholder="List name…"
+              autoFocus
+              className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12.5px] text-ink outline-none"
+            />
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={addList}
+                disabled={busy || !newName.trim()}
+                className="flex-1 rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-[#0C0D10] disabled:opacity-50"
+              >
+                Add list
+              </button>
+              <button type="button" onClick={() => setAdding(false)} className="px-2 text-[12px] text-ink3">
+                ✕
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="rounded-[14px] border border-dashed border-line py-3 text-[12.5px] font-semibold text-ink3 transition hover:border-accent hover:text-accent"
+          >
+            + Add list
+          </button>
+        )}
+      </div>
+
       {ghost && (
         <div
           className="pointer-events-none fixed z-[60] max-w-[220px] truncate rounded-[10px] border border-accent bg-card px-3 py-2 text-[12.5px] font-semibold text-ink shadow-[0_10px_30px_-8px_rgba(0,0,0,0.7)]"
