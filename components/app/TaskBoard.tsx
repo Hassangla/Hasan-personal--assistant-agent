@@ -537,9 +537,9 @@ export function TaskBoard({
               </div>
             )}
 
-            {lane.id === firstListId && (
+            {!lane.isDone && (
               <div className="mb-2">
-                <BoardAddCard />
+                <BoardAddCard listId={lane.id} />
               </div>
             )}
 

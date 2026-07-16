@@ -41,5 +41,22 @@ export async function POST(req: Request) {
     await supabaseAdmin().from("tasks").update({ goal_id: goalId }).eq("id", created.id).eq("user_id", USER_ID);
   }
 
+  // Optionally drop it straight into a board list (manual add from the board).
+  // Guard: never land a new task in a "done" list — that would complete it on
+  // arrival. Falls back to leaving it unassigned (shown in the first list).
+  const listId = typeof body.board_list_id === "string" ? body.board_list_id.trim() : "";
+  if (listId && created?.id) {
+    const sb = supabaseAdmin();
+    const { data: list } = await sb
+      .from("board_lists")
+      .select("id,is_done")
+      .eq("id", listId)
+      .eq("user_id", USER_ID)
+      .maybeSingle();
+    if (list && !list.is_done) {
+      await sb.from("tasks").update({ board_list_id: listId }).eq("id", created.id).eq("user_id", USER_ID);
+    }
+  }
+
   return NextResponse.json({ ok: true, task: created });
 }
