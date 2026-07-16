@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 import { LabelChips } from "@/components/app/LabelPicker";
+import { labelMeta } from "@/lib/labels";
 import { BoardAddCard } from "@/components/app/BoardAddCard";
 import { toast } from "@/components/app/Toast";
 import type { TodayTask, DoneTask } from "@/lib/dashboard/queries";
@@ -58,6 +59,9 @@ export function TaskBoard({
   const [nameDraft, setNameDraft] = useState("");
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
+  const [q, setQ] = useState(""); // in-board search
+  const [listDragId, setListDragId] = useState<string | null>(null); // column being dragged
+  const [listDropId, setListDropId] = useState<string | null>(null); // insert before this list (null = end)
 
   // Lists live in local state so edits (rename / recolor / reorder / add /
   // delete / done-toggle) show INSTANTLY, independent of a server refresh. The
@@ -110,8 +114,19 @@ export function TaskBoard({
 
   const effList = (c: Card): string | null => moves[c.id]?.listId ?? c.listId;
   const effPos = (c: Card): number => moves[c.id]?.pos ?? c.pos;
+  const query = q.trim().toLowerCase();
+  const matchesQ = (c: Card): boolean => {
+    if (!query) return true;
+    return (
+      c.title.toLowerCase().includes(query) ||
+      (c.area?.toLowerCase().includes(query) ?? false) ||
+      c.labels.some((l) => labelMeta(l)?.name.toLowerCase().includes(query))
+    );
+  };
   const listCards = (listId: string): Card[] =>
-    cards.filter((c) => effList(c) === listId).sort((a, b) => effPos(a) - effPos(b) || a.ord - b.ord);
+    cards
+      .filter((c) => effList(c) === listId && matchesQ(c))
+      .sort((a, b) => effPos(a) - effPos(b) || a.ord - b.ord);
 
   async function place(id: string, listId: string, beforeId: string | null) {
     if (busy) return;
@@ -259,6 +274,54 @@ export function TaskBoard({
     }
   }
 
+  // ——— drag a whole list (column) to reorder ———
+  function nextListId(id: string): string | null {
+    const i = ordered.findIndex((l) => l.id === id);
+    return i >= 0 && i < ordered.length - 1 ? ordered[i + 1]!.id : null;
+  }
+  async function placeList(id: string, beforeId: string | null) {
+    const dragged = ordered.find((l) => l.id === id);
+    if (!dragged) return;
+    const arr = ordered.filter((l) => l.id !== id);
+    let i = beforeId ? arr.findIndex((l) => l.id === beforeId) : arr.length;
+    if (i < 0) i = arr.length;
+    arr.splice(i, 0, dragged);
+    setLl(arr.map((l, idx) => ({ ...l, position: idx }))); // instant
+    await postList({ action: "reorder", ordered_ids: arr.map((l) => l.id) });
+  }
+  function computeListDrop(x: number, y: number): string | null {
+    const el = document.elementFromPoint(x, y);
+    const laneEl = el?.closest("[data-list]") as HTMLElement | null;
+    if (!laneEl || !rootRef.current?.contains(laneEl)) return listDropId;
+    const id = laneEl.getAttribute("data-list")!;
+    const r = laneEl.getBoundingClientRect();
+    return x < r.left + r.width / 2 ? id : nextListId(id);
+  }
+  function onListGripDown(e: React.PointerEvent, lane: BoardList) {
+    if (busy) return;
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setListDragId(lane.id);
+    setGhost({ x: e.clientX, y: e.clientY, title: lane.name });
+  }
+  function onListGripMove(e: React.PointerEvent) {
+    if (!listDragId) return;
+    e.preventDefault();
+    setGhost((g) => (g ? { ...g, x: e.clientX, y: e.clientY } : g));
+    setListDropId(computeListDrop(e.clientX, e.clientY));
+  }
+  function onListGripUp(e: React.PointerEvent) {
+    if (!listDragId) return;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    const id = listDragId;
+    const before = listDropId;
+    setListDragId(null);
+    setListDropId(null);
+    setGhost(null);
+    if (before !== id) placeList(id, before);
+  }
+
   // ——— pointer drag ———
   function computeDrop(x: number, y: number): Drop | null {
     const el = document.elementFromPoint(x, y);
@@ -308,10 +371,34 @@ export function TaskBoard({
   const colW = fill ? "w-[300px]" : "w-[270px]";
 
   return (
-    <div
-      ref={rootRef}
-      className={`-mx-2.5 flex gap-3 overflow-x-auto px-2.5 pb-1 ${fill ? "h-full" : ""}`}
-    >
+    <div className={`flex flex-col gap-2.5 ${fill ? "h-full min-h-0" : ""}`}>
+      {/* in-board search */}
+      <div className="px-0.5">
+        <div className="relative max-w-[340px]">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink3">⌕</span>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search this board — title, area, label…"
+            className="w-full rounded-[9px] border border-line bg-card py-1.5 pl-7 pr-7 text-[12.5px] text-ink outline-none focus:border-[#3A3F47]"
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => setQ("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[12px] text-ink3 hover:text-ink"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div
+        ref={rootRef}
+        className={`-mx-2.5 flex gap-3 overflow-x-auto px-2.5 pb-1 ${fill ? "min-h-0 flex-1" : ""}`}
+      >
       {ordered.map((lane) => {
         const list = listCards(lane.id);
         const openCount = list.filter((c) => !c.completed).length;
@@ -322,12 +409,29 @@ export function TaskBoard({
           <div
             key={lane.id}
             data-list={lane.id}
-            className={`flex ${colW} shrink-0 flex-col rounded-[14px] border p-2.5 transition ${fill ? "min-h-0" : ""} ${
-              active ? "border-accent bg-[#C2F24C08]" : "border-line2 bg-cardalt"
+            style={{
+              borderColor: active || listDropId === lane.id ? "#C2F24C" : lane.color + "88",
+              background: lane.color + "0D",
+            }}
+            className={`flex ${colW} shrink-0 flex-col rounded-[14px] border-2 p-2.5 transition ${fill ? "min-h-0" : ""} ${
+              listDragId === lane.id ? "opacity-40" : ""
             }`}
           >
             {/* header */}
-            <div className="mb-2 flex items-center gap-2 px-1">
+            <div className="mb-2 flex items-center gap-1.5 px-0.5">
+              <button
+                type="button"
+                onPointerDown={(e) => onListGripDown(e, lane)}
+                onPointerMove={onListGripMove}
+                onPointerUp={onListGripUp}
+                onPointerCancel={onListGripUp}
+                title="Drag to reorder list"
+                aria-label="Drag to reorder list"
+                style={{ touchAction: "none" }}
+                className="shrink-0 cursor-grab select-none text-[13px] leading-none text-ink3 hover:text-ink active:cursor-grabbing"
+              >
+                ⠿
+              </button>
               <span style={{ background: lane.color }} className="h-2.5 w-2.5 shrink-0 rounded-full" />
               <button
                 type="button"
@@ -560,6 +664,7 @@ export function TaskBoard({
             + Add list
           </button>
         )}
+      </div>
       </div>
 
       {ghost && (

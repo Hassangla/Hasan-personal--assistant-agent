@@ -103,6 +103,24 @@ export function TaskDetailPanel() {
     }
   }
 
+  // Area is editable in place (the "aspect" of a task) — instant, then persist.
+  async function saveArea(value: string) {
+    if (!taskId) return;
+    setD((cur) => (cur ? { ...cur, area: value || null } : cur));
+    try {
+      await fetch("/api/tasks/update", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task_id: taskId, area: value }),
+      });
+      toast(value ? "Area updated ✓" : "Area cleared");
+      router.refresh();
+    } catch {
+      toast("Couldn't update area — try again", "err");
+      load();
+    }
+  }
+
   // Labels toggle instantly (optimistic), then persist.
   async function toggleLabel(next: string[]) {
     if (!taskId) return;
@@ -394,17 +412,22 @@ export function TaskDetailPanel() {
 
               <div>
                 <div className={label}>Area</div>
-                {m ? (
-                  <span
-                    style={{ color: m.color, background: m.color + "14" }}
-                    className="inline-flex items-center gap-1.5 rounded-[7px] px-2 py-1 text-[12px] font-semibold"
+                <div className="flex items-center gap-2">
+                  {m && <span style={{ background: m.color }} className="h-2 w-2 shrink-0 rounded-full" />}
+                  <select
+                    value={d.area ? areaMeta(d.area).canonical : ""}
+                    onChange={(e) => saveArea(e.target.value)}
+                    disabled={busy}
+                    className="w-full rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[13px] text-ink outline-none"
                   >
-                    <span style={{ background: m.color }} className="h-1.5 w-1.5 rounded-full" />
-                    {m.label}
-                  </span>
-                ) : (
-                  <span className="text-[13px] text-ink3">—</span>
-                )}
+                    <option value="">— no area —</option>
+                    {AREA_META.map((a) => (
+                      <option key={a.slug} value={a.canonical}>
+                        {a.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
