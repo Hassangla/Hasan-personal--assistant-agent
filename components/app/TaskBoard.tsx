@@ -183,10 +183,15 @@ export function TaskBoard({
       setBusy(false);
     }
   }
+  function openEditor(lane: BoardList) {
+    setNameDraft(lane.name);
+    setEditList(lane.id);
+  }
   async function renameList(id: string) {
     const name = nameDraft.trim();
-    setEditList(null);
-    if (name) await listApi({ action: "update", id, name });
+    const current = lists.find((l) => l.id === id)?.name;
+    if (!name || name === current) return; // no-op keeps the panel open
+    await listApi({ action: "update", id, name }); // panel stays open
   }
   async function moveList(id: string, dir: -1 | 1) {
     const idx = ordered.findIndex((l) => l.id === id);
@@ -274,45 +279,57 @@ export function TaskBoard({
             {/* header */}
             <div className="mb-2 flex items-center gap-2 px-1">
               <span style={{ background: lane.color }} className="h-2.5 w-2.5 shrink-0 rounded-full" />
-              {editing ? (
-                <input
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onBlur={() => renameList(lane.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") renameList(lane.id);
-                    if (e.key === "Escape") setEditList(null);
-                  }}
-                  autoFocus
-                  className="min-w-0 flex-1 rounded-[6px] border border-line bg-card px-1.5 py-0.5 text-[13px] font-bold text-ink outline-none"
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNameDraft(lane.name);
-                    setEditList(lane.id);
-                  }}
-                  title="Rename list"
-                  className="min-w-0 flex-1 truncate text-left text-[13px] font-bold text-inkstrong hover:underline"
+              <button
+                type="button"
+                onClick={() => openEditor(lane)}
+                title="List settings"
+                className="min-w-0 flex-1 truncate text-left text-[13px] font-bold text-inkstrong hover:underline"
+              >
+                {lane.name}
+              </button>
+              {lane.isDone && (
+                <span
+                  title="Tasks dropped here are marked complete"
+                  className="shrink-0 rounded-[4px] bg-[#43D3A21E] px-1 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.04em] text-good"
                 >
-                  {lane.name}
-                </button>
+                  ✓ done
+                </span>
               )}
               <span className="font-mono text-[10px] text-inkfaint">{openCount}</span>
               <button
                 type="button"
-                onClick={() => setEditList(editing ? null : lane.id)}
+                onClick={() => (editing ? setEditList(null) : openEditor(lane))}
                 title="List settings"
                 className="rounded-[5px] px-1 text-[13px] leading-none text-ink3 transition hover:bg-line2 hover:text-ink"
               >
-                ⋯
+                {editing ? "✕" : "⋯"}
               </button>
             </div>
 
-            {/* inline list editor */}
+            {/* inline list editor — stays open while you click its controls */}
             {editing && (
-              <div className="mb-2 flex flex-col gap-2 rounded-[10px] border border-line2 bg-card p-2">
+              <div className="mb-2 flex flex-col gap-2.5 rounded-[10px] border border-line2 bg-card p-2.5">
+                <div className="flex items-center gap-1.5">
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") renameList(lane.id);
+                      if (e.key === "Escape") setEditList(null);
+                    }}
+                    placeholder="List name"
+                    autoFocus
+                    className="min-w-0 flex-1 rounded-[6px] border border-line bg-cardalt px-2 py-1 text-[13px] font-semibold text-ink outline-none focus:border-[#3A3F47]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => renameList(lane.id)}
+                    disabled={busy || !nameDraft.trim() || nameDraft.trim() === lane.name}
+                    className="rounded-[6px] bg-accent px-2.5 py-1 text-[11px] font-bold text-[#0C0D10] transition hover:brightness-105 disabled:opacity-40"
+                  >
+                    Rename
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-1">
                   {PALETTE.map((c) => (
                     <button
@@ -325,13 +342,22 @@ export function TaskBoard({
                     />
                   ))}
                 </div>
-                <div className="flex items-center gap-1">
+                <label className="flex cursor-pointer items-center gap-2 text-[11.5px] text-ink2">
+                  <input
+                    type="checkbox"
+                    checked={lane.isDone}
+                    onChange={() => listApi({ action: "update", id: lane.id, is_done: !lane.isDone })}
+                    className="h-3.5 w-3.5 accent-[#43D3A2]"
+                  />
+                  Completes tasks dropped here
+                </label>
+                <div className="flex items-center gap-1 border-t border-line2 pt-2">
                   <button
                     type="button"
                     onClick={() => moveList(lane.id, -1)}
                     disabled={idx === 0 || busy}
                     className="rounded-[6px] border border-line px-2 py-1 text-[12px] text-ink3 transition hover:text-ink disabled:opacity-30"
-                    title="Move left"
+                    title="Move list left"
                   >
                     ‹ left
                   </button>
@@ -340,7 +366,7 @@ export function TaskBoard({
                     onClick={() => moveList(lane.id, 1)}
                     disabled={idx === ordered.length - 1 || busy}
                     className="rounded-[6px] border border-line px-2 py-1 text-[12px] text-ink3 transition hover:text-ink disabled:opacity-30"
-                    title="Move right"
+                    title="Move list right"
                   >
                     right ›
                   </button>
@@ -354,7 +380,7 @@ export function TaskBoard({
                     className="ml-auto rounded-[6px] border border-line px-2 py-1 text-[12px] text-danger transition hover:border-danger"
                     title="Delete list"
                   >
-                    🗑
+                    🗑 Delete
                   </button>
                 </div>
               </div>
