@@ -107,10 +107,12 @@ export function TodoList({
 
       <TaskFilters filters={filters} onChange={changeFilters} total={tasks.length} shown={filtered.length} />
 
-      {filtered.length === 0 && isFiltering(filters) ? (
-        <p className="py-6 text-center text-[13.5px] text-ink3">Nothing matches these filters.</p>
-      ) : view === "board" ? (
+      {/* Board always renders its lists (empty is fine — you still see the
+          columns). The "no matches" message is only for list/table. */}
+      {view === "board" ? (
         <TaskBoard tasks={filtered} done={filteredDone} lists={boardLists} />
+      ) : filtered.length === 0 && isFiltering(filters) ? (
+        <p className="py-6 text-center text-[13.5px] text-ink3">Nothing matches these filters.</p>
       ) : view === "table" ? (
         <TaskTable tasks={slice} />
       ) : (
