@@ -5,11 +5,20 @@ import { TaskBoard } from "@/components/app/TaskBoard";
 import { TaskFilters, applyFilters, EMPTY_FILTERS, type TaskFilterState } from "@/components/app/TaskFilters";
 import { areaMeta } from "@/lib/areas";
 import type { TodayTask, DoneTask } from "@/lib/dashboard/queries";
+import type { BoardList } from "@/lib/dashboard/board";
 
 // Full-screen focus board: the filter bar + a board whose lanes fill the
 // viewport height. Shares the dashboard's saved filter so the two stay in
 // sync. Nothing but the board here — a distraction-free place to work.
-export function BoardWorkspace({ tasks, done }: { tasks: TodayTask[]; done: DoneTask[] }) {
+export function BoardWorkspace({
+  tasks,
+  done,
+  lists,
+}: {
+  tasks: TodayTask[];
+  done: DoneTask[];
+  lists: BoardList[];
+}) {
   const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
 
   useEffect(() => {
@@ -40,7 +49,7 @@ export function BoardWorkspace({ tasks, done }: { tasks: TodayTask[]; done: Done
     <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 sm:px-8">
       <TaskFilters filters={filters} onChange={change} total={tasks.length} shown={filtered.length} />
       <div className="min-h-0 flex-1">
-        <TaskBoard tasks={filtered} done={filteredDone} fill />
+        <TaskBoard tasks={filtered} done={filteredDone} lists={lists} fill />
       </div>
     </div>
   );

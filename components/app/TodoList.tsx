@@ -8,6 +8,7 @@ import { TaskBoard } from "@/components/app/TaskBoard";
 import { TaskFilters, applyFilters, isFiltering, EMPTY_FILTERS, type TaskFilterState } from "@/components/app/TaskFilters";
 import { areaMeta } from "@/lib/areas";
 import type { TodayTask, DoneTask } from "@/lib/dashboard/queries";
+import type { BoardList } from "@/lib/dashboard/board";
 
 const PAGE_SIZE = 15;
 type View = "list" | "table" | "board";
@@ -15,7 +16,15 @@ type View = "list" | "table" | "board";
 // The dashboard To-Do list: persisted view switch — cozy list, Notion-style
 // table, or Trello-style board — plus a label/filter bar that narrows every
 // view the same way. Pagination on list/table; the board shows lanes in full.
-export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: DoneTask[] }) {
+export function TodoList({
+  tasks,
+  done = [],
+  boardLists = [],
+}: {
+  tasks: TodayTask[];
+  done?: DoneTask[];
+  boardLists?: BoardList[];
+}) {
   const [page, setPage] = useState(0);
   const [view, setView] = useState<View>("list");
   const [filters, setFilters] = useState<TaskFilterState>(EMPTY_FILTERS);
@@ -101,7 +110,7 @@ export function TodoList({ tasks, done = [] }: { tasks: TodayTask[]; done?: Done
       {filtered.length === 0 && isFiltering(filters) ? (
         <p className="py-6 text-center text-[13.5px] text-ink3">Nothing matches these filters.</p>
       ) : view === "board" ? (
-        <TaskBoard tasks={filtered} done={filteredDone} />
+        <TaskBoard tasks={filtered} done={filteredDone} lists={boardLists} />
       ) : view === "table" ? (
         <TaskTable tasks={slice} />
       ) : (

@@ -19,7 +19,7 @@ export default async function BoardPage() {
           <span className="font-mono text-[11px] text-ink3">drag by the ⠿ grip · To Do → In Progress → Done</span>
         </div>
         {d.today.length || d.recentDone.length ? (
-          <BoardWorkspace tasks={d.today} done={d.recentDone} />
+          <BoardWorkspace tasks={d.today} done={d.recentDone} lists={d.boardLists} />
         ) : (
           <p className="px-8 py-16 text-center text-[14px] text-ink3">
             No open tasks — capture one from the dashboard or in Chat.
