@@ -7,11 +7,11 @@ import { LabelPicker } from "@/components/app/LabelPicker";
 import { DeadlineField } from "@/components/app/DeadlineField";
 import { toast } from "@/components/app/Toast";
 
-// Inline "add a task" card that lives at the bottom of the board's To-Do lane —
-// so you can capture work without leaving the board (works on the dashboard and
-// the full-screen /board focus page). New tasks land in To Do with the same
-// follow-up arming as anywhere else.
-export function BoardAddCard() {
+// Inline "add a task" card at the top of a board list — capture work without
+// leaving the board (dashboard and the /board focus page). The task is created
+// directly in `listId` (any non-done list); new tasks get the usual follow-up
+// arming.
+export function BoardAddCard({ listId }: { listId?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -33,6 +33,7 @@ export function BoardAddCard() {
           area: area || undefined,
           labels: labels.length ? labels : undefined,
           due: due || undefined,
+          board_list_id: listId || undefined,
         }),
       });
       if (!res.ok) throw new Error();
