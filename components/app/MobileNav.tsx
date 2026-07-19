@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   BarChart3,
   Archive,
+  Settings,
   MoreHorizontal,
   type LucideIcon,
 } from "lucide-react";
@@ -33,6 +34,7 @@ export function MobileNav({ pendingCount = 0 }: { pendingCount?: number }) {
     { href: "/approvals", Icon: CheckCircle2, label: "Approvals", badge: pendingCount },
     { href: "/productivity", Icon: BarChart3, label: "Productivity", badge: 0 },
     { href: "/archive", Icon: Archive, label: "Archive", badge: 0 },
+    { href: "/settings", Icon: Settings, label: "Settings", badge: 0 },
   ];
   const moreActive = moreItems.some((m) => pathname === m.href);
 

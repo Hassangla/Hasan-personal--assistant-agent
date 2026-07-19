@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Settings } from "lucide-react";
 import { Clock } from "./Clock";
 import { MobileNav } from "./MobileNav";
 import { NotificationBell } from "./NotificationBell";
@@ -13,7 +14,17 @@ export function Header({
   tz,
   width = "wide",
 }: {
-  active?: "dashboard" | "chat" | "board" | "calendar" | "goals" | "people" | "approvals" | "archive" | "productivity";
+  active?:
+    | "dashboard"
+    | "chat"
+    | "board"
+    | "calendar"
+    | "goals"
+    | "people"
+    | "approvals"
+    | "archive"
+    | "productivity"
+    | "settings";
   pendingCount?: number;
   tz: string;
   width?: "wide" | "narrow";
@@ -87,6 +98,16 @@ export function Header({
             ONLINE
           </span>
           <NotificationBell />
+          <Link
+            href="/settings"
+            title="Settings"
+            aria-label="Settings"
+            className={`flex h-[32px] w-[32px] items-center justify-center rounded-[9px] transition hover:bg-[#191C22] ${
+              active === "settings" ? "text-accent" : "text-ink2 hover:text-ink"
+            }`}
+          >
+            <Settings className="h-[18px] w-[18px]" strokeWidth={2} />
+          </Link>
         </div>
 
         {/* On phones the clock cluster is hidden — search + bell + ONLINE dot. */}
