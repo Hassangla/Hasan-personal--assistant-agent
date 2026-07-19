@@ -16,6 +16,7 @@ export function AddTask({ variant }: { variant: "todo" | "delegated" }) {
   const [title, setTitle] = useState("");
   const [area, setArea] = useState("");
   const [who, setWho] = useState("");
+  const [desc, setDesc] = useState("");
   const [labels, setLabels] = useState<string[]>([]);
   const [due, setDue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -32,6 +33,7 @@ export function AddTask({ variant }: { variant: "todo" | "delegated" }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           title,
+          description: desc || undefined,
           area: area || undefined,
           labels: labels.length ? labels : undefined,
           due: due || undefined,
@@ -43,6 +45,7 @@ export function AddTask({ variant }: { variant: "todo" | "delegated" }) {
       setTitle("");
       setWho("");
       setArea("");
+      setDesc("");
       setLabels([]);
       setDue("");
       setOpen(false);
@@ -100,6 +103,16 @@ export function AddTask({ variant }: { variant: "todo" | "delegated" }) {
       </div>
       {variant === "todo" && (
         <div className="flex flex-col gap-2 rounded-[10px] border border-line2 bg-cardalt p-2.5">
+          <div>
+            <div className="mb-1 font-mono text-[9.5px] uppercase tracking-[0.1em] text-ink3">Details</div>
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              rows={2}
+              placeholder="Description / notes (optional)…"
+              className="w-full resize-none rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12.5px] text-ink outline-none placeholder:text-inkfaint focus:border-[#3A3F47]"
+            />
+          </div>
           <div>
             <div className="mb-1 font-mono text-[9.5px] uppercase tracking-[0.1em] text-ink3">Labels</div>
             <LabelPicker value={labels} onChange={setLabels} />
