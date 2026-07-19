@@ -135,8 +135,9 @@ export default async function Dashboard() {
         )}
 
         {/* MAIN GRID */}
-        <div className="mt-[34px] grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.55fr_1fr]">
-          {/* TODAY */}
+        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.55fr_1fr]">
+          {/* LEFT COLUMN — your tasks and the work you're chasing, together */}
+          <div className="flex min-w-0 flex-col gap-6">
           <Card className="px-5 pb-4 pt-6 sm:px-7">
             <SectionHeader index="02" title="To-Do" note="— your tasks" meta={`${d.today.length}`} />
             <div className="mt-1.5">
@@ -148,6 +149,25 @@ export default async function Dashboard() {
               <AddTask variant="todo" />
             </div>
           </Card>
+
+          {/* I'M CHASING — delegated work, right under your tasks */}
+          <Card className="px-5 pb-4 pt-6 sm:px-7">
+            <SectionHeader index="06" title="I'm Chasing" note="— delegated; I chase until you confirm" />
+            <div className="mb-1 mt-2 flex items-center gap-[9px]">
+              <span className="h-2 w-2 rounded-full bg-blue" />
+              <h3 className="m-0 text-[13px] font-bold text-inkstrong">Waiting on others</h3>
+              <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.06em] text-inkfaint">delegated</span>
+            </div>
+            {d.chasingOthers.length ? (
+              d.chasingOthers.map((c) => (
+                <TaskItem key={c.id} id={c.id} title={c.title} variant="delegated" area={c.area} who={c.who} />
+              ))
+            ) : (
+              <p className="py-3 text-[13px] text-ink3">Nothing delegated — add one below, or tap → on a To-Do task.</p>
+            )}
+            <AddTask variant="delegated" />
+          </Card>
+          </div>
 
           {/* RIGHT COLUMN */}
           <div className="flex flex-col gap-6">
@@ -266,32 +286,8 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        {/* I'M CHASING (delegated) */}
-        <div className="mt-9">
-          <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-mono text-[12px] tracking-[0.1em] text-inkfaint">06</span>
-            <h2 className="m-0 font-display text-[21px] font-bold tracking-[-0.01em] text-ink">I'm Chasing</h2>
-            <span className="hidden text-[13px] text-ink3 sm:inline">— delegated work; I chase them until you confirm it's done</span>
-          </div>
-          <Card className="px-5 pb-4 pt-[22px] sm:px-[26px]">
-            <div className="mb-1 flex items-center gap-[9px]">
-              <span className="h-2 w-2 rounded-full bg-blue" />
-              <h3 className="m-0 text-[14px] font-bold text-inkstrong">Waiting on others</h3>
-              <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.06em] text-inkfaint">delegated</span>
-            </div>
-            {d.chasingOthers.length ? (
-              d.chasingOthers.map((c) => (
-                <TaskItem key={c.id} id={c.id} title={c.title} variant="delegated" area={c.area} who={c.who} />
-              ))
-            ) : (
-              <p className="py-3 text-[13px] text-ink3">Nothing delegated — add one below, or tap → on a To-Do task.</p>
-            )}
-            <AddTask variant="delegated" />
-          </Card>
-        </div>
-
         {/* INBOX + PEOPLE */}
-        <div className="mt-9 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
           <Card className="px-5 py-6 sm:px-7">
             <SectionHeader index="07" title="Inbox" note="— triaged, awaiting your OK" />
             <div className="my-3.5 flex items-center gap-[7px] rounded-[8px] bg-[#122A20] px-[11px] py-[7px] text-[12px] text-good">
