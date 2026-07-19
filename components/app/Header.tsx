@@ -24,7 +24,6 @@ export function Header({
   const maxW = "max-w-[1180px]";
   const nav: { key: NonNullable<typeof active>; label: string; href: string }[] = [
     { key: "dashboard", label: "Dashboard", href: "/" },
-    { key: "chat", label: "Chat", href: "/chat" },
     { key: "board", label: "Board", href: "/board" },
     { key: "calendar", label: "Calendar", href: "/calendar" },
     { key: "goals", label: "Goals", href: "/goals" },
