@@ -18,6 +18,8 @@ export async function POST(req: Request) {
     "create_task",
     {
       title,
+      description:
+        typeof body.description === "string" && body.description.trim() ? body.description.trim().slice(0, 4000) : undefined,
       area: typeof body.area === "string" && body.area.trim() ? body.area.trim() : undefined,
       due_at: typeof body.due === "string" && body.due.trim() ? body.due.trim() : undefined,
       urgency: typeof body.urgency === "string" && body.urgency.trim() ? body.urgency.trim() : undefined,

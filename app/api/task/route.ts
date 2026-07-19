@@ -19,7 +19,8 @@ export async function GET(req: Request) {
     .maybeSingle();
   if (!t) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const [areaRes, goalRes, goalsRes, reasonRes, filesRes, checklistRes, areasAllRes] = await Promise.all([
+  const [areaRes, goalRes, goalsRes, reasonRes, filesRes, checklistRes, areasAllRes, commentsRes] =
+    await Promise.all([
     t.area_id
       ? sb.from("entities").select("name").eq("id", t.area_id).maybeSingle()
       : Promise.resolve({ data: null as any }),
@@ -54,6 +55,13 @@ export async function GET(req: Request) {
       .order("position", { ascending: true })
       .limit(100),
     sb.from("entities").select("id,name").eq("user_id", USER_ID).eq("kind", "area"),
+    sb
+      .from("task_comments")
+      .select("id,body,created_at")
+      .eq("user_id", USER_ID)
+      .eq("task_id", id)
+      .order("created_at", { ascending: true })
+      .limit(200),
   ]);
 
   const areaNameById = new Map<string, string>();
@@ -92,6 +100,7 @@ export async function GET(req: Request) {
       lastReason: ((reasonRes.data ?? [])[0] as any)?.payload?.reason ?? null,
       files,
       checklist,
+      comments: ((commentsRes.data ?? []) as any[]).map((c) => ({ id: c.id, body: c.body, createdIso: c.created_at })),
     },
     goals: ((goalsRes.data ?? []) as any[]).map((g) => ({ id: g.id, title: g.title, horizon: g.horizon })),
   });

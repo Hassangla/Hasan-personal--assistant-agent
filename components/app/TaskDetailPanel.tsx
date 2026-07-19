@@ -26,6 +26,7 @@ type Detail = {
   lastReason: string | null;
   files?: TaskFile[];
   checklist?: ChecklistItem[];
+  comments?: { id: string; body: string; createdIso: string }[];
 };
 
 function fmtSize(bytes: number): string {
@@ -82,6 +83,10 @@ export function TaskDetailPanel() {
   const [clBusy, setClBusy] = useState(false);
   const [editingDue, setEditingDue] = useState(false);
   const [dueInput, setDueInput] = useState("");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState("");
+  const [commentText, setCommentText] = useState("");
+  const [commentBusy, setCommentBusy] = useState(false);
   const [panelDelegating, setPanelDelegating] = useState(false);
   const [panelDelegateName, setPanelDelegateName] = useState("");
 
@@ -100,6 +105,63 @@ export function TaskDetailPanel() {
       router.refresh();
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function saveDescription(value: string) {
+    if (!taskId || busy) return;
+    setBusy(true);
+    setD((cur) => (cur ? { ...cur, description: value || null } : cur));
+    try {
+      await fetch("/api/tasks/update", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task_id: taskId, description: value }),
+      });
+      toast("Details saved ✓");
+      setEditingDesc(false);
+      router.refresh();
+    } catch {
+      toast("Couldn't save details — try again", "err");
+      load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addComment(e: React.FormEvent) {
+    e.preventDefault();
+    const text = commentText.trim();
+    if (!text || !taskId || commentBusy) return;
+    setCommentBusy(true);
+    setCommentText("");
+    try {
+      const res = await fetch("/api/tasks/comments", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task_id: taskId, body: text }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && j.comment) {
+        setD((cur) => (cur ? { ...cur, comments: [...(cur.comments ?? []), j.comment] } : cur));
+      } else {
+        setCommentText(text);
+        toast("Couldn't add comment — try again", "err");
+      }
+    } finally {
+      setCommentBusy(false);
+    }
+  }
+  async function deleteComment(id: string) {
+    setD((cur) => (cur ? { ...cur, comments: (cur.comments ?? []).filter((c) => c.id !== id) } : cur));
+    try {
+      await fetch("/api/tasks/comments", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ delete_id: id }),
+      });
+    } catch {
+      load();
     }
   }
 
@@ -340,7 +402,55 @@ export function TaskDetailPanel() {
         ) : (
           <div className="flex-1 px-5 py-5">
             <h2 className="m-0 text-[19px] font-bold leading-snug text-inkstrong">{d.title}</h2>
-            {d.description && <p className="mt-1.5 text-[13px] leading-normal text-ink2">{d.description}</p>}
+            <div className="mt-1.5">
+              {editingDesc ? (
+                <div className="flex flex-col gap-1.5">
+                  <textarea
+                    value={descDraft}
+                    onChange={(e) => setDescDraft(e.target.value)}
+                    rows={3}
+                    autoFocus
+                    placeholder="Add a description or details…"
+                    className="w-full resize-none rounded-[8px] border border-line bg-card px-2.5 py-2 text-[13px] leading-normal text-ink outline-none focus:border-[#3A3F47]"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => saveDescription(descDraft)}
+                      disabled={busy}
+                      className="rounded-[8px] bg-accent px-2.5 py-1 text-[12px] font-bold text-[#0C0D10] disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button onClick={() => setEditingDesc(false)} className="px-1 text-[12px] text-ink3">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : d.description ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDescDraft(d.description ?? "");
+                    setEditingDesc(true);
+                  }}
+                  title="Edit details"
+                  className="block w-full whitespace-pre-wrap text-left text-[13px] leading-normal text-ink2 transition hover:text-ink"
+                >
+                  {d.description}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDescDraft("");
+                    setEditingDesc(true);
+                  }}
+                  className="text-[12.5px] font-semibold text-ink3 transition hover:text-accent"
+                >
+                  + Add details
+                </button>
+              )}
+            </div>
 
             <div className="mt-4 space-y-3.5">
               <div>
@@ -609,6 +719,53 @@ export function TaskDetailPanel() {
                 </button>
                 <span className="ml-2 font-mono text-[10px] text-inkfaint">4 MB max · stays on the platform</span>
                 {fileMsg && <p className="m-0 mt-1 text-[12px] text-danger">{fileMsg}</p>}
+              </div>
+
+              {/* Comments — a running thread of notes on the task. */}
+              <div>
+                <div className={label}>Comments</div>
+                <div className="flex flex-col gap-1.5">
+                  {(d.comments ?? []).map((c) => (
+                    <div key={c.id} className="group rounded-[9px] border border-line2 bg-cardalt px-2.5 py-2">
+                      <p className="m-0 whitespace-pre-wrap text-[13px] leading-normal text-ink">{c.body}</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-inkfaint">{fmtDate(c.createdIso)}</span>
+                        <button
+                          onClick={() => deleteComment(c.id)}
+                          className="font-mono text-[10px] text-inkfaint opacity-0 transition hover:text-danger group-hover:opacity-100"
+                          title="Delete comment"
+                        >
+                          delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {(d.comments ?? []).length === 0 && (
+                    <span className="text-[12.5px] text-ink3">No comments yet.</span>
+                  )}
+                </div>
+                <form onSubmit={addComment} className="mt-2 flex items-end gap-1.5">
+                  <textarea
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        addComment(e);
+                      }
+                    }}
+                    rows={1}
+                    placeholder="Add a comment…"
+                    className="max-h-[100px] min-h-[38px] min-w-0 flex-1 resize-none rounded-[8px] border border-line bg-card px-2.5 py-2 text-[13px] text-ink outline-none placeholder:text-inkfaint focus:border-[#3A3F47]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={commentBusy || !commentText.trim()}
+                    className="shrink-0 rounded-[8px] bg-accent px-3 py-2 text-[12px] font-bold text-[#0C0D10] disabled:opacity-50"
+                  >
+                    {commentBusy ? "…" : "Post"}
+                  </button>
+                </form>
               </div>
             </div>
 

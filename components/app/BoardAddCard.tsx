@@ -16,6 +16,7 @@ export function BoardAddCard({ listId }: { listId?: string }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [area, setArea] = useState("");
+  const [desc, setDesc] = useState("");
   const [labels, setLabels] = useState<string[]>([]);
   const [due, setDue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,6 +31,7 @@ export function BoardAddCard({ listId }: { listId?: string }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           title,
+          description: desc || undefined,
           area: area || undefined,
           labels: labels.length ? labels : undefined,
           due: due || undefined,
@@ -40,6 +42,7 @@ export function BoardAddCard({ listId }: { listId?: string }) {
       toast("Task added ✓ — follow-up armed");
       setTitle("");
       setArea("");
+      setDesc("");
       setLabels([]);
       setDue("");
       setOpen(false);
@@ -82,6 +85,13 @@ export function BoardAddCard({ listId }: { listId?: string }) {
           </option>
         ))}
       </select>
+      <textarea
+        value={desc}
+        onChange={(e) => setDesc(e.target.value)}
+        rows={2}
+        placeholder="Details / notes (optional)…"
+        className={`w-full resize-none ${input}`}
+      />
       <LabelPicker value={labels} onChange={setLabels} />
       <DeadlineField value={due} onChange={setDue} compact />
       <div className="flex items-center gap-1.5">

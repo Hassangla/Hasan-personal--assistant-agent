@@ -38,8 +38,9 @@ export async function POST(req: Request) {
   if (!taskId) return NextResponse.json({ error: "task_id required" }, { status: 400 });
   const hasDue = "due" in body;
   const hasArea = "area" in body;
-  if (!hasDue && !hasArea) {
-    return NextResponse.json({ error: "provide due and/or area" }, { status: 400 });
+  const hasDesc = "description" in body;
+  if (!hasDue && !hasArea && !hasDesc) {
+    return NextResponse.json({ error: "provide due, area, and/or description" }, { status: 400 });
   }
 
   const sb = supabaseAdmin();
@@ -64,6 +65,11 @@ export async function POST(req: Request) {
   if (hasArea) {
     const name = typeof body.area === "string" ? body.area.trim() : "";
     patch.area_id = await resolveArea(sb, name);
+  }
+
+  if (hasDesc) {
+    const desc = typeof body.description === "string" ? body.description.trim().slice(0, 4000) : "";
+    patch.description = desc || null;
   }
 
   const { error } = await sb.from("tasks").update(patch).eq("id", taskId).eq("user_id", USER_ID);
