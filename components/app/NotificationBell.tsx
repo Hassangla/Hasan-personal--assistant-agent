@@ -2,18 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Bell, AlarmClock, CalendarClock, Info, type LucideIcon } from "lucide-react";
 
-// Trello-style notification bell: unread badge, dropdown log of everything the
-// agent sent (nudges · meeting alerts · tests), tap an entry to jump to what
-// it was about. Polls the count once a minute.
+// Notification bell: unread badge, dropdown log of everything the agent sent
+// (nudges · meeting alerts · tests), tap an entry to jump to what it was about.
+// Polls the count once a minute.
 
 type Item = { id: string; kind: string; title: string; body: string | null; url: string | null; read: boolean; at: string };
 
-const KIND_ICON: Record<string, string> = {
-  task_nudge: "⏰",
-  meeting: "🗓",
-  test: "🔔",
-  system: "ℹ️",
+const KIND_ICON: Record<string, LucideIcon> = {
+  task_nudge: AlarmClock,
+  meeting: CalendarClock,
+  test: Bell,
+  system: Info,
 };
 
 function ago(iso: string): string {
@@ -95,9 +96,9 @@ export function NotificationBell() {
         onClick={() => setOpen((v) => !v)}
         title="Notifications"
         aria-label="Notifications"
-        className="relative flex h-[32px] w-[32px] items-center justify-center rounded-[9px] text-[16px] transition hover:bg-black/5"
+        className="relative flex h-[32px] w-[32px] items-center justify-center rounded-[9px] text-ink2 transition hover:bg-[#191C22] hover:text-ink"
       >
-        🔔
+        <Bell className="h-[18px] w-[18px]" strokeWidth={2} />
         {unread > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-accent px-1 font-mono text-[9.5px] font-bold text-[#0C0D10]">
             {unread > 9 ? "9+" : unread}
@@ -127,7 +128,10 @@ export function NotificationBell() {
                     n.read ? "opacity-65" : ""
                   }`}
                 >
-                  <span className="mt-px shrink-0 text-[14px]">{KIND_ICON[n.kind] ?? "🔔"}</span>
+                  {(() => {
+                    const Ic = KIND_ICON[n.kind] ?? Bell;
+                    return <Ic className="mt-0.5 h-4 w-4 shrink-0 text-ink3" strokeWidth={2} />;
+                  })()}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-semibold text-inkstrong">{n.title}</span>
                     {n.body && <span className="block truncate text-[12px] text-ink2">{n.body}</span>}
