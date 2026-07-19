@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import { TaskDetailPanel } from "@/components/app/TaskDetailPanel";
 import { Toaster } from "@/components/app/Toast";
+import { PushKeepAlive } from "@/components/app/PushKeepAlive";
 
 export const metadata: Metadata = {
   title: "Personal Agent",
@@ -29,6 +30,7 @@ export default function RootLayout({
           <TaskDetailPanel />
         </Suspense>
         <Toaster />
+        <PushKeepAlive />
       </body>
     </html>
   );
