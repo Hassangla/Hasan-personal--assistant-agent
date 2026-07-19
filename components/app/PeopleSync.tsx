@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AREA_META } from "@/lib/areas";
 import { toast } from "@/components/app/Toast";
@@ -112,7 +113,9 @@ export function PeopleSync({ connected, hasCalendarICloud, pending, pendingTotal
   return (
     <div className="mb-5 rounded-[14px] border border-line bg-card p-4">
       <div className="flex flex-wrap items-center gap-2.5">
-        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink3">🔄 iCloud Contacts · live sync</span>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink3">
+          <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} /> iCloud Contacts · live sync
+        </span>
         {connected ? (
           <>
             <span className="text-[12.5px] font-semibold text-good">✓ {connected.username}</span>
