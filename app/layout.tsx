@@ -4,6 +4,7 @@ import "./globals.css";
 import { TaskDetailPanel } from "@/components/app/TaskDetailPanel";
 import { Toaster } from "@/components/app/Toast";
 import { PushKeepAlive } from "@/components/app/PushKeepAlive";
+import { ChatWidget } from "@/components/app/ChatWidget";
 
 export const metadata: Metadata = {
   title: "Personal Agent",
@@ -31,6 +32,9 @@ export default function RootLayout({
         </Suspense>
         <Toaster />
         <PushKeepAlive />
+        <Suspense fallback={null}>
+          <ChatWidget />
+        </Suspense>
       </body>
     </html>
   );
