@@ -6,6 +6,7 @@ import { areaMeta, AREA_META } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 import { LabelPicker } from "@/components/app/LabelPicker";
 import { DeadlineField } from "@/components/app/DeadlineField";
+import { X, Check, Paperclip, Trash2, Plus, CornerUpRight, Undo2 } from "lucide-react";
 import { Markdown } from "@/components/app/Markdown";
 import { toast } from "@/components/app/Toast";
 
@@ -419,8 +420,8 @@ export function TaskDetailPanel() {
       <div className="relative flex h-full w-full max-w-[440px] flex-col overflow-y-auto border-l border-line bg-page shadow-[0_0_60px_-15px_rgba(60,45,30,0.55)]">
         <div className="sticky top-0 flex items-center justify-between border-b border-line bg-page/90 px-5 py-4 backdrop-blur">
           <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">Task</span>
-          <button onClick={close} className="text-[18px] leading-none text-ink3 transition hover:text-ink" aria-label="Close">
-            ✕
+          <button onClick={close} className="flex items-center text-ink3 transition hover:text-ink" aria-label="Close">
+            <X className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
         </div>
 
@@ -544,8 +545,8 @@ export function TaskDetailPanel() {
                           Clear
                         </button>
                       )}
-                      <button onClick={() => setEditingDue(false)} className="px-1 text-[13px] text-ink3">
-                        ✕
+                      <button onClick={() => setEditingDue(false)} className="flex items-center px-1 text-ink3">
+                        <X className="h-4 w-4" strokeWidth={2} />
                       </button>
                     </div>
                     <span className="font-mono text-[10px] text-inkfaint">
@@ -658,7 +659,7 @@ export function TaskDetailPanel() {
                               c.done ? "border-good bg-good text-white" : "border-[#3A3F47] bg-transparent hover:border-good"
                             }`}
                           >
-                            {c.done ? "✓" : ""}
+                            {c.done && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
                           </button>
                           <span
                             className="min-w-0 flex-1 truncate"
@@ -679,9 +680,9 @@ export function TaskDetailPanel() {
                             onClick={() => checklistCall({ action: "delete", item_id: c.id })}
                             disabled={clBusy}
                             title="Remove item"
-                            className="shrink-0 text-[12px] text-ink3 transition hover:text-danger disabled:opacity-50"
+                            className="flex shrink-0 items-center text-ink3 transition hover:text-danger disabled:opacity-50"
                           >
-                            ✕
+                            <X className="h-3.5 w-3.5" strokeWidth={2} />
                           </button>
                         </li>
                       );
@@ -731,7 +732,7 @@ export function TaskDetailPanel() {
                   <ul className="mb-2 space-y-1">
                     {(d.files ?? []).map((f) => (
                       <li key={f.id} className="flex items-center gap-2 text-[13px]">
-                        <span className="shrink-0">📎</span>
+                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-ink3" strokeWidth={2} />
                         {f.url ? (
                           <a
                             href={f.url}
@@ -749,9 +750,9 @@ export function TaskDetailPanel() {
                           onClick={() => deleteFile(f.id)}
                           disabled={uploading}
                           title="Remove file"
-                          className="shrink-0 text-[12px] text-ink3 transition hover:text-danger disabled:opacity-50"
+                          className="flex shrink-0 items-center text-ink3 transition hover:text-danger disabled:opacity-50"
                         >
-                          🗑
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
                         </button>
                       </li>
                     ))}
@@ -769,9 +770,10 @@ export function TaskDetailPanel() {
                 <button
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
-                  className="rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-[#3A3F47] hover:text-[#E4E2DC] disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-[8px] border border-line bg-card px-2.5 py-1.5 text-[12px] font-semibold text-ink2 transition hover:border-[#3A3F47] hover:text-[#E4E2DC] disabled:opacity-50"
                 >
-                  {uploading ? "Working…" : "＋ Attach file"}
+                  <Paperclip className="h-3.5 w-3.5" strokeWidth={2} />
+                  {uploading ? "Working…" : "Attach file"}
                 </button>
                 <span className="ml-2 font-mono text-[10px] text-inkfaint">4 MB max · stays on the platform</span>
                 {fileMsg && <p className="m-0 mt-1 text-[12px] text-danger">{fileMsg}</p>}
@@ -829,17 +831,17 @@ export function TaskDetailPanel() {
               <button
                 onClick={complete}
                 disabled={busy}
-                className="rounded-[9px] bg-good px-3.5 py-2 text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(46,140,97,0.5)] disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-[9px] bg-good px-3.5 py-2 text-[13px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(46,140,97,0.5)] disabled:opacity-50"
               >
-                ✓ Complete
+                <Check className="h-4 w-4" strokeWidth={2.5} /> Complete
               </button>
               {d.delegatedTo ? (
                 <button
                   onClick={takeBack}
                   disabled={busy}
-                  className="rounded-[9px] border border-line bg-card px-3.5 py-2 text-[13px] font-semibold text-ink2 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-[9px] border border-line bg-card px-3.5 py-2 text-[13px] font-semibold text-ink2 disabled:opacity-50"
                 >
-                  ↩ Take back
+                  <Undo2 className="h-4 w-4" strokeWidth={2} /> Take back
                 </button>
               ) : panelDelegating ? (
                 <form onSubmit={submitPanelDelegate} className="flex items-center gap-1.5">
@@ -854,21 +856,21 @@ export function TaskDetailPanel() {
                   <button
                     type="submit"
                     disabled={busy || !panelDelegateName.trim()}
-                    className="rounded-[9px] bg-accent px-3 py-2 text-[13px] font-bold text-[#0C0D10] disabled:opacity-50"
+                    className="flex items-center justify-center rounded-[9px] bg-accent px-3 py-2 text-[#0C0D10] disabled:opacity-50"
                   >
-                    →
+                    <CornerUpRight className="h-4 w-4" strokeWidth={2.5} />
                   </button>
-                  <button type="button" onClick={() => setPanelDelegating(false)} className="px-1 text-[14px] text-ink3">
-                    ✕
+                  <button type="button" onClick={() => setPanelDelegating(false)} className="flex items-center px-1 text-ink3">
+                    <X className="h-[18px] w-[18px]" strokeWidth={2} />
                   </button>
                 </form>
               ) : (
                 <button
                   onClick={() => setPanelDelegating(true)}
                   disabled={busy}
-                  className="rounded-[9px] border border-line bg-card px-3.5 py-2 text-[13px] font-semibold text-ink2 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-[9px] border border-line bg-card px-3.5 py-2 text-[13px] font-semibold text-ink2 disabled:opacity-50"
                 >
-                  → Delegate
+                  <CornerUpRight className="h-4 w-4" strokeWidth={2} /> Delegate
                 </button>
               )}
               {confirmDel ? (
@@ -883,9 +885,9 @@ export function TaskDetailPanel() {
                 <button
                   onClick={() => setConfirmDel(true)}
                   disabled={busy}
-                  className="ml-auto rounded-[9px] px-3.5 py-2 text-[13px] font-semibold text-[#FF6A45] transition hover:text-danger"
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-[9px] px-3.5 py-2 text-[13px] font-semibold text-[#FF6A45] transition hover:text-danger"
                 >
-                  🗑 Delete
+                  <Trash2 className="h-4 w-4" strokeWidth={2} /> Delete
                 </button>
               )}
             </div>

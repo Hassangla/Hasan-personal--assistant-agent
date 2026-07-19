@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Bell } from "lucide-react";
 import { toast } from "@/components/app/Toast";
 
 // Enable Web Push on this device. On iPhone/iPad, Apple requires the site to
@@ -111,7 +112,9 @@ export function NotificationsSetup() {
 
   return (
     <div className="mt-4 rounded-[12px] border border-line2 bg-cardalt px-3.5 py-3">
-      <div className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">🔔 On this device</div>
+      <div className="mb-1.5 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink3">
+        <Bell className="h-3.5 w-3.5" strokeWidth={2} /> On this device
+      </div>
       {state === "loading" && <p className="m-0 text-[12.5px] text-ink3">Checking…</p>}
       {state === "unsupported" && (
         <p className="m-0 text-[12.5px] leading-normal text-ink2">This browser doesn't support push notifications.</p>
