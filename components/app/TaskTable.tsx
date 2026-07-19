@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { Check, Target } from "lucide-react";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 import type { TodayTask } from "@/lib/dashboard/queries";
@@ -109,8 +110,8 @@ export function TaskTable({ tasks }: { tasks: TodayTask[] }) {
               <tr key={t.id} className="border-b border-line2 transition hover:bg-cardalt">
                 <td className="px-2.5 py-2">
                   {gone ? (
-                    <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-good bg-good text-[10px] font-bold text-white">
-                      ✓
+                    <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-good bg-good text-white">
+                      <Check className="h-2.5 w-2.5" strokeWidth={3} />
                     </span>
                   ) : (
                     <button
@@ -150,7 +151,13 @@ export function TaskTable({ tasks }: { tasks: TodayTask[] }) {
                   {t.dueIso ? <TaskTimer dueIso={t.dueIso} /> : <span className="text-inkfaint">—</span>}
                 </td>
                 <td className="max-w-[160px] truncate whitespace-nowrap px-2.5 py-2 text-[12px] text-ink2">
-                  {t.goalTitle ? `🎯 ${t.goalTitle}` : <span className="text-inkfaint">—</span>}
+                  {t.goalTitle ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Target className="h-3 w-3 shrink-0" strokeWidth={2} /> {t.goalTitle}
+                    </span>
+                  ) : (
+                    <span className="text-inkfaint">—</span>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-2.5 py-2 font-mono text-[11px]">
                   {t.checklist && t.checklist.total > 0 ? (

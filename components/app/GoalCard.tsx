@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { Check, Circle, Plus } from "lucide-react";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 import type { Goal } from "@/lib/dashboard/goals";
@@ -56,7 +57,11 @@ export function GoalCard({ goal }: { goal: Goal }) {
             const done = t.status === "done";
             return (
               <div key={t.id} className="flex items-center gap-2 border-t border-line2 py-1.5 text-[13px]">
-                <span className={done ? "text-good" : "text-inkfaint"}>{done ? "✓" : "○"}</span>
+                {done ? (
+                  <Check className="h-3.5 w-3.5 shrink-0 text-good" strokeWidth={2.5} />
+                ) : (
+                  <Circle className="h-3.5 w-3.5 shrink-0 text-inkfaint" strokeWidth={2} />
+                )}
                 <button
                   type="button"
                   onClick={() => router.push(`${pathname}?task=${t.id}`)}
@@ -101,7 +106,7 @@ export function GoalCard({ goal }: { goal: Goal }) {
         </form>
       ) : (
         <button onClick={() => setAdding(true)} className="mt-2 text-[12px] font-semibold text-ink3 transition hover:text-accent">
-          + Add task
+          <Plus className="mr-0.5 inline h-3.5 w-3.5 align-text-bottom" strokeWidth={2} />Add task
         </button>
       )}
     </div>

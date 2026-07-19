@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { Check, Trash2, CornerUpRight, Undo2, X, ChevronRight, ChevronDown, Target, ListChecks } from "lucide-react";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 import { LabelChips } from "@/components/app/LabelPicker";
@@ -145,8 +146,8 @@ export function TaskItem({
     <div className="-mx-2.5 flex items-center gap-2.5 rounded-[10px] border-t border-line2 px-2.5 py-[11px] hover:bg-cardalt">
       {/* COMPLETE */}
       {gone === "done" ? (
-        <span className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full border-2 border-good bg-good text-[12px] font-bold text-white">
-          ✓
+        <span className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full border-2 border-good bg-good text-white">
+          <Check className="h-3 w-3" strokeWidth={3} />
         </span>
       ) : (
         <button
@@ -194,12 +195,13 @@ export function TaskItem({
                   checklist.done === checklist.total ? "text-good" : "text-ink3"
                 }`}
               >
-                ☑ {checklist.done}/{checklist.total} {showCl ? "▾" : "▸"}
+                <ListChecks className="mb-px inline h-3.5 w-3.5 align-text-bottom" strokeWidth={2} /> {checklist.done}/
+                {checklist.total} {showCl ? <ChevronDown className="inline h-3 w-3" /> : <ChevronRight className="inline h-3 w-3" />}
               </button>
             )}
             {goalTitle && (
-              <span className="min-w-0 truncate" title="Contributes to this goal">
-                🎯 {goalTitle}
+              <span className="flex min-w-0 items-center gap-1 truncate" title="Contributes to this goal">
+                <Target className="h-3 w-3 shrink-0" strokeWidth={2} /> {goalTitle}
               </span>
             )}
           </span>
@@ -244,12 +246,12 @@ export function TaskItem({
           <button
             type="submit"
             disabled={busy || !delegateName.trim()}
-            className="rounded-[7px] bg-accent px-2 py-1 text-[11px] font-bold text-[#0C0D10] disabled:opacity-50"
+            className="flex items-center justify-center rounded-[7px] bg-accent px-2 py-1.5 text-[#0C0D10] disabled:opacity-50"
           >
-            →
+            <CornerUpRight className="h-3.5 w-3.5" strokeWidth={2.5} />
           </button>
           <button type="button" onClick={() => setDelegating(false)} className={iconBtn} title="Cancel">
-            ✕
+            <X className="h-4 w-4" strokeWidth={2} />
           </button>
         </form>
       )}
@@ -257,11 +259,11 @@ export function TaskItem({
         <div className="flex shrink-0 items-center gap-0.5">
           {variant === "todo" ? (
             <button onClick={() => setDelegating(true)} disabled={busy} title="Delegate → I'm Chasing" className={iconBtn}>
-              →
+              <CornerUpRight className="h-4 w-4" strokeWidth={2} />
             </button>
           ) : (
             <button onClick={takeBack} disabled={busy} title="Take back → To-Do" className={iconBtn}>
-              ↩
+              <Undo2 className="h-4 w-4" strokeWidth={2} />
             </button>
           )}
           {confirmDel ? (
@@ -274,7 +276,7 @@ export function TaskItem({
                 Delete
               </button>
               <button onClick={() => setConfirmDel(false)} className={iconBtn} title="Cancel">
-                ✕
+                <X className="h-4 w-4" strokeWidth={2} />
               </button>
             </span>
           ) : (
@@ -285,7 +287,7 @@ export function TaskItem({
               aria-label="Delete task"
               className={`${iconBtn} hover:text-danger`}
             >
-              🗑
+              <Trash2 className="h-4 w-4" strokeWidth={2} />
             </button>
           )}
         </div>
@@ -305,7 +307,7 @@ export function TaskItem({
                 eff ? "border-good bg-good text-white" : "border-[#3A3F47] bg-transparent hover:border-good"
               }`}
             >
-              {eff ? "✓" : ""}
+              {eff && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
             </button>
             <span
               className="min-w-0 flex-1 truncate"

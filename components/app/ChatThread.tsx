@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowUp, Mic } from "lucide-react";
 
 // The in-app conversation with the agent — the Telegram replacement. One
 // shared thread across channels; polls lightly so replies that happened
@@ -281,32 +282,32 @@ export function ChatThread() {
           <button
             type="button"
             onClick={() => stopRecording(false)}
-            className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-accent text-[17px] text-[#0C0D10] shadow-accent transition hover:brightness-105"
+            className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-accent text-[#0C0D10] shadow-accent transition hover:brightness-105"
             title="Send voice note"
             aria-label="Send voice note"
           >
-            ↑
+            <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
           </button>
         ) : text.trim() ? (
           <button
             type="submit"
             disabled={busy}
-            className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-accent text-[17px] text-[#0C0D10] shadow-accent transition hover:brightness-105 disabled:opacity-40"
+            className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-accent text-[#0C0D10] shadow-accent transition hover:brightness-105 disabled:opacity-40"
             title="Send"
             aria-label="Send"
           >
-            ↑
+            <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
           </button>
         ) : (
           <button
             type="button"
             onClick={startRecording}
             disabled={busy}
-            className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full border border-line bg-card text-[18px] text-ink2 transition hover:border-[#3A3F47] hover:text-ink disabled:opacity-40"
+            className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full border border-line bg-card text-ink2 transition hover:border-[#3A3F47] hover:text-ink disabled:opacity-40"
             title="Record a voice note"
             aria-label="Record a voice note"
           >
-            🎤
+            <Mic className="h-5 w-5" strokeWidth={2} />
           </button>
         )}
       </form>

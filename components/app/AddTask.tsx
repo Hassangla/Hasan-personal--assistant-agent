@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { AREA_META } from "@/lib/areas";
 import { LabelPicker } from "@/components/app/LabelPicker";
 import { DeadlineField } from "@/components/app/DeadlineField";
@@ -63,7 +64,7 @@ export function AddTask({ variant }: { variant: "todo" | "delegated" }) {
         onClick={() => setOpen(true)}
         className="mt-2 flex items-center gap-1.5 rounded-[8px] px-1 py-1 text-[12.5px] font-semibold text-ink3 transition hover:text-accent"
       >
-        <span className="text-[14px] leading-none text-accent">+</span> Add task
+        <Plus className="h-4 w-4 text-accent" strokeWidth={2} /> Add task
       </button>
     );
   }
@@ -97,8 +98,8 @@ export function AddTask({ variant }: { variant: "todo" | "delegated" }) {
         >
           {busy ? "Adding…" : "Add"}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-1.5 py-1 text-[12px] text-ink3" title="Cancel">
-          ✕
+        <button type="button" onClick={() => setOpen(false)} className="flex items-center px-1.5 py-1 text-ink3" title="Cancel">
+          <X className="h-4 w-4" strokeWidth={2} />
         </button>
       </div>
       {variant === "todo" && (

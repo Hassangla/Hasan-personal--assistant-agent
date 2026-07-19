@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 
 export function NewGoal({ horizon }: { horizon: "short" | "medium" | "long" }) {
   const router = useRouter();
@@ -29,8 +30,8 @@ export function NewGoal({ horizon }: { horizon: "short" | "medium" | "long" }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-[12.5px] font-semibold text-ink3 transition hover:text-accent">
-        + New goal
+      <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink3 transition hover:text-accent">
+        <Plus className="h-3.5 w-3.5" strokeWidth={2} /> New goal
       </button>
     );
   }
