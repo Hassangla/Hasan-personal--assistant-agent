@@ -75,6 +75,35 @@ export function NotificationsSetup() {
     }
   }
 
+  // Force a brand-new push token (drop the old subscription, subscribe fresh).
+  // Fixes a device that stopped receiving because iOS rotated/expired the token.
+  async function reRegister() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) await existing.unsubscribe();
+      const { key } = await fetch("/api/push/public-key").then((r) => r.json());
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      const res = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+      });
+      if (!res.ok) throw new Error();
+      const j = await fetch("/api/push/test", { method: "POST" }).then((r) => r.json());
+      toast(
+        j.sent > 0 ? `Re-registered ✓ — test sent to ${j.sent} device(s)` : "Re-registered, but the test didn't send",
+        j.sent > 0 ? "ok" : "err",
+      );
+    } catch {
+      toast("Couldn't re-register — try again", "err");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const btn =
     "rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-bold text-[#0C0D10] shadow-accent transition hover:brightness-105 disabled:opacity-50";
   const ghost =
@@ -122,6 +151,12 @@ export function NotificationsSetup() {
           <button onClick={sendTest} disabled={busy} className={ghost}>
             {busy ? "Sending…" : "Send a test"}
           </button>
+          <button onClick={reRegister} disabled={busy} className={ghost} title="Fix a device that stopped getting notifications">
+            Re-register
+          </button>
+          <span className="basis-full font-mono text-[10px] text-inkfaint">
+            Not getting alerts? Tap Re-register to refresh this device's push token.
+          </span>
         </div>
       )}
       {state === "denied" && (
