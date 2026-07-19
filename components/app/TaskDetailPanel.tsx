@@ -6,6 +6,7 @@ import { areaMeta, AREA_META } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 import { LabelPicker } from "@/components/app/LabelPicker";
 import { DeadlineField } from "@/components/app/DeadlineField";
+import { Markdown } from "@/components/app/Markdown";
 import { toast } from "@/components/app/Toast";
 
 type TaskFile = { id: string; name: string; size: number; mime: string | null; url: string | null };
@@ -85,6 +86,32 @@ export function TaskDetailPanel() {
   const [dueInput, setDueInput] = useState("");
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
+  const descRef = useRef<HTMLTextAreaElement>(null);
+
+  // Markdown toolbar helpers — wrap the selection or prefix the current line.
+  function surround(before: string, after = before) {
+    const ta = descRef.current;
+    if (!ta) return;
+    const { selectionStart: s, selectionEnd: e, value } = ta;
+    const sel = value.slice(s, e);
+    setDescDraft(value.slice(0, s) + before + sel + after + value.slice(e));
+    requestAnimationFrame(() => {
+      ta.focus();
+      const caret = s + before.length + sel.length;
+      ta.setSelectionRange(sel ? caret : s + before.length, sel ? caret : s + before.length);
+    });
+  }
+  function linePrefix(prefix: string) {
+    const ta = descRef.current;
+    if (!ta) return;
+    const { selectionStart: s, value } = ta;
+    const lineStart = value.lastIndexOf("\n", s - 1) + 1;
+    setDescDraft(value.slice(0, lineStart) + prefix + value.slice(lineStart));
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(s + prefix.length, s + prefix.length);
+    });
+  }
   const [commentText, setCommentText] = useState("");
   const [commentBusy, setCommentBusy] = useState(false);
   const [panelDelegating, setPanelDelegating] = useState(false);
@@ -402,16 +429,41 @@ export function TaskDetailPanel() {
         ) : (
           <div className="flex-1 px-5 py-5">
             <h2 className="m-0 text-[19px] font-bold leading-snug text-inkstrong">{d.title}</h2>
-            <div className="mt-1.5">
+            <div className="mt-2">
               {editingDesc ? (
                 <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-0.5 rounded-t-[8px] border border-b-0 border-line bg-cardalt px-1.5 py-1">
+                    {(
+                      [
+                        { label: "B", title: "Bold", fn: () => surround("**"), cls: "font-bold" },
+                        { label: "I", title: "Italic", fn: () => surround("_"), cls: "italic" },
+                        { label: "H", title: "Heading", fn: () => linePrefix("## "), cls: "font-bold" },
+                        { label: "•", title: "Bullet list", fn: () => linePrefix("- "), cls: "" },
+                        { label: "☑", title: "Checklist item", fn: () => linePrefix("- [ ] "), cls: "" },
+                        { label: "🔗", title: "Link", fn: () => surround("[", "](url)"), cls: "" },
+                        { label: "<>", title: "Code", fn: () => surround("`"), cls: "font-mono text-[10px]" },
+                      ] as const
+                    ).map((b) => (
+                      <button
+                        key={b.title}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={b.fn}
+                        title={b.title}
+                        className={`rounded-[5px] px-1.5 py-0.5 text-[12px] text-ink2 transition hover:bg-line2 hover:text-ink ${b.cls}`}
+                      >
+                        {b.label}
+                      </button>
+                    ))}
+                  </div>
                   <textarea
+                    ref={descRef}
                     value={descDraft}
                     onChange={(e) => setDescDraft(e.target.value)}
-                    rows={3}
+                    rows={5}
                     autoFocus
-                    placeholder="Add a description or details…"
-                    className="w-full resize-none rounded-[8px] border border-line bg-card px-2.5 py-2 text-[13px] leading-normal text-ink outline-none focus:border-[#3A3F47]"
+                    placeholder="Add a description… **bold**, - lists, - [ ] checkboxes, [links](url)"
+                    className="-mt-1.5 w-full resize-y rounded-b-[8px] border border-line bg-card px-2.5 py-2 text-[13px] leading-normal text-ink outline-none focus:border-[#3A3F47]"
                   />
                   <div className="flex items-center gap-1.5">
                     <button
@@ -424,20 +476,24 @@ export function TaskDetailPanel() {
                     <button onClick={() => setEditingDesc(false)} className="px-1 text-[12px] text-ink3">
                       Cancel
                     </button>
+                    <span className="ml-auto font-mono text-[10px] text-inkfaint">Markdown supported</span>
                   </div>
                 </div>
               ) : d.description ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDescDraft(d.description ?? "");
-                    setEditingDesc(true);
-                  }}
-                  title="Edit details"
-                  className="block w-full whitespace-pre-wrap text-left text-[13px] leading-normal text-ink2 transition hover:text-ink"
-                >
-                  {d.description}
-                </button>
+                <div className="group relative rounded-[8px] border border-transparent px-0.5 py-0.5 transition hover:border-line2 hover:bg-cardalt/40">
+                  <Markdown>{d.description}</Markdown>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDescDraft(d.description ?? "");
+                      setEditingDesc(true);
+                    }}
+                    title="Edit details"
+                    className="absolute right-1 top-1 rounded-[6px] bg-card px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ink3 opacity-0 transition hover:text-accent group-hover:opacity-100"
+                  >
+                    edit
+                  </button>
+                </div>
               ) : (
                 <button
                   type="button"
@@ -447,7 +503,7 @@ export function TaskDetailPanel() {
                   }}
                   className="text-[12.5px] font-semibold text-ink3 transition hover:text-accent"
                 >
-                  + Add details
+                  + Add description
                 </button>
               )}
             </div>
@@ -727,7 +783,7 @@ export function TaskDetailPanel() {
                 <div className="flex flex-col gap-1.5">
                   {(d.comments ?? []).map((c) => (
                     <div key={c.id} className="group rounded-[9px] border border-line2 bg-cardalt px-2.5 py-2">
-                      <p className="m-0 whitespace-pre-wrap text-[13px] leading-normal text-ink">{c.body}</p>
+                      <Markdown>{c.body}</Markdown>
                       <div className="mt-1 flex items-center gap-2">
                         <span className="font-mono text-[10px] text-inkfaint">{fmtDate(c.createdIso)}</span>
                         <button
