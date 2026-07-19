@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { Check } from "lucide-react";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
 import { toast } from "@/components/app/Toast";
@@ -11,7 +12,7 @@ type StateChip = { color: string; label: string };
 // One click-to-complete task row, used across Today, the two Following-up lists,
 // and Area tasks. Optimistic: on click the circle flips to a solid green check
 // (rendered as a separate element, never by mutating one node), the title
-// strikes through, the trailing chip becomes "✓ Done", then after ~1s the row
+// strikes through, the trailing chip becomes "Done", then after ~1s the row
 // refreshes out of the open list. Reverts + reddens the circle on failure.
 export function CompletableTaskRow({
   id,
@@ -69,9 +70,9 @@ export function CompletableTaskRow({
   const circle = done ? (
     <span
       style={{ width: size, height: size }}
-      className="flex shrink-0 items-center justify-center rounded-full border-2 border-good bg-good text-[12px] font-bold text-white"
+      className="flex shrink-0 items-center justify-center rounded-full border-2 border-good bg-good text-white"
     >
-      ✓
+      <Check className="h-3 w-3" strokeWidth={3} />
     </span>
   ) : (
     <button
@@ -91,10 +92,10 @@ export function CompletableTaskRow({
 
   const donePill =
     layout === "chaseYou" ? (
-      <span className="shrink-0 whitespace-nowrap font-mono text-[10px] font-semibold uppercase text-good">✓ Done</span>
+      <span className="shrink-0 whitespace-nowrap font-mono text-[10px] font-semibold uppercase text-good">Done</span>
     ) : (
       <span className="shrink-0 whitespace-nowrap rounded-[6px] bg-[#43D3A218] px-2 py-1 font-mono text-[10px] font-semibold uppercase text-good">
-        ✓ Done
+        Done
       </span>
     );
 

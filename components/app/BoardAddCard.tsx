@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { AREA_META } from "@/lib/areas";
 import { LabelPicker } from "@/components/app/LabelPicker";
 import { DeadlineField } from "@/components/app/DeadlineField";
@@ -59,9 +60,9 @@ export function BoardAddCard({ listId }: { listId?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-1 w-full rounded-[11px] border border-dashed border-line py-2.5 text-center text-[12.5px] font-semibold text-ink3 transition hover:border-accent hover:text-accent"
+        className="mt-1 flex w-full items-center justify-center gap-1 rounded-[11px] border border-dashed border-line py-2.5 text-center text-[12.5px] font-semibold text-ink3 transition hover:border-accent hover:text-accent"
       >
-        + Add a task
+        <Plus className="h-4 w-4" strokeWidth={2} /> Add a task
       </button>
     );
   }
@@ -102,8 +103,8 @@ export function BoardAddCard({ listId }: { listId?: string }) {
         >
           {busy ? "Adding…" : "Add task"}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-2 py-1 text-[12px] text-ink3" title="Cancel">
-          ✕
+        <button type="button" onClick={() => setOpen(false)} className="flex items-center px-1.5 py-1 text-ink3" title="Cancel">
+          <X className="h-4 w-4" strokeWidth={2} />
         </button>
       </div>
     </form>

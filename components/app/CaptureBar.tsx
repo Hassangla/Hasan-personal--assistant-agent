@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 
 // The hero capture line. POSTs to /api/capture (same pipeline as Telegram) on
 // submit only — never on load — then refreshes so any new task/expense appears.
@@ -41,7 +42,7 @@ export function CaptureBar() {
         {/* A real, visibly-tappable field (the borderless version read as plain
             text on phones — people couldn't find the typing space). */}
         <div className="flex min-w-0 flex-1 basis-full items-center gap-2.5 rounded-[13px] border border-[#2A2E36] bg-card px-3.5 py-[3px] focus-within:border-[#3A3F47] sm:basis-auto">
-          <span className="shrink-0 font-mono text-[16px] text-accent">›</span>
+          <Sparkles className="shrink-0 text-accent" style={{ width: 16, height: 16 }} strokeWidth={2} />
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}

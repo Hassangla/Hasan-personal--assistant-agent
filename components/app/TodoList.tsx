@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { List, Table2, Columns3, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
 import { TaskItem } from "@/components/app/TaskItem";
 import { TaskTable } from "@/components/app/TaskTable";
 import { TaskBoard } from "@/components/app/TaskBoard";
@@ -85,22 +86,22 @@ export function TodoList({
         {view === "board" ? (
           <Link
             href="/board"
-            className="rounded-[8px] border border-accent/40 bg-[#C2F24C10] px-2.5 py-1 font-mono text-[11px] font-semibold text-accent no-underline transition hover:bg-[#C2F24C1F]"
+            className="inline-flex items-center gap-1 rounded-[8px] border border-accent/40 bg-[#C2F24C10] px-2.5 py-1 font-mono text-[11px] font-semibold text-accent no-underline transition hover:bg-[#C2F24C1F]"
           >
-            ⤢ Focus board
+            <Maximize2 className="h-3 w-3" strokeWidth={2.5} /> Focus board
           </Link>
         ) : (
           <span />
         )}
         <div className="inline-flex items-center gap-0.5 rounded-[9px] bg-line2 p-0.5">
-          <button type="button" onClick={() => switchView("list")} title="List view" className={viewBtn(view === "list")}>
-            ≡ List
+          <button type="button" onClick={() => switchView("list")} title="List view" className={`inline-flex items-center gap-1 ${viewBtn(view === "list")}`}>
+            <List className="h-3.5 w-3.5" strokeWidth={2} /> List
           </button>
-          <button type="button" onClick={() => switchView("table")} title="Table view" className={viewBtn(view === "table")}>
-            ⊞ Table
+          <button type="button" onClick={() => switchView("table")} title="Table view" className={`inline-flex items-center gap-1 ${viewBtn(view === "table")}`}>
+            <Table2 className="h-3.5 w-3.5" strokeWidth={2} /> Table
           </button>
-          <button type="button" onClick={() => switchView("board")} title="Board view" className={viewBtn(view === "board")}>
-            ⫴ Board
+          <button type="button" onClick={() => switchView("board")} title="Board view" className={`inline-flex items-center gap-1 ${viewBtn(view === "board")}`}>
+            <Columns3 className="h-3.5 w-3.5" strokeWidth={2} /> Board
           </button>
         </div>
       </div>
@@ -134,15 +135,15 @@ export function TodoList({
       )}
       {view !== "board" && filtered.length > PAGE_SIZE && (
         <div className="flex items-center justify-between gap-2 border-t border-line2 pt-2.5">
-          <button type="button" onClick={() => setPage(cur - 1)} disabled={cur === 0} className={navBtn}>
-            ‹ Prev
+          <button type="button" onClick={() => setPage(cur - 1)} disabled={cur === 0} className={`inline-flex items-center gap-1 ${navBtn}`}>
+            <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} /> Prev
           </button>
           <span className="font-mono text-[11px] text-ink3">
             {cur * PAGE_SIZE + 1}–{Math.min(filtered.length, (cur + 1) * PAGE_SIZE)} of {filtered.length} · page{" "}
             {cur + 1}/{pages}
           </span>
-          <button type="button" onClick={() => setPage(cur + 1)} disabled={cur >= pages - 1} className={navBtn}>
-            Next ›
+          <button type="button" onClick={() => setPage(cur + 1)} disabled={cur >= pages - 1} className={`inline-flex items-center gap-1 ${navBtn}`}>
+            Next <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
           </button>
         </div>
       )}

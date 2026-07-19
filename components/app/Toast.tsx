@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 
 // Tiny global toast system. Any client component fires `toast("Done ✓")`;
 // the <Toaster/> in the root layout renders them bottom-center, warm-styled,
@@ -35,13 +36,18 @@ export function Toaster() {
         <div
           key={t.id}
           style={{ animation: "pa-toast-in 0.22s ease-out" }}
-          className={`pointer-events-auto max-w-[92vw] rounded-[12px] border px-4 py-2.5 text-[13px] font-semibold shadow-[0_10px_30px_-10px_rgba(60,45,30,0.45)] backdrop-blur ${
+          className={`pointer-events-auto flex max-w-[92vw] items-center gap-2 rounded-[12px] border px-4 py-2.5 text-[13px] font-semibold shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)] backdrop-blur ${
             t.kind === "err"
               ? "border-[#2A1613] bg-[#2A1613] text-danger"
               : "border-[#122A20] bg-[#122A20] text-good"
           }`}
         >
-          {t.message}
+          {t.kind === "err" ? (
+            <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={2} />
+          ) : (
+            <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={2} />
+          )}
+          <span>{t.message}</span>
         </div>
       ))}
     </div>

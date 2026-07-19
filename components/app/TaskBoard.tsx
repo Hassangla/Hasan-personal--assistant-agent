@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
-import { GripVertical, Search } from "lucide-react";
+import { GripVertical, Search, Check, Trash2, X, Plus, MoreHorizontal, ListChecks } from "lucide-react";
 import { LabelChips } from "@/components/app/LabelPicker";
 import { labelMeta } from "@/lib/labels";
 import { BoardAddCard } from "@/components/app/BoardAddCard";
@@ -455,9 +455,9 @@ export function TaskBoard({
                 type="button"
                 onClick={() => (editing ? setEditList(null) : openEditor(lane))}
                 title="List settings"
-                className="rounded-[5px] px-1 text-[13px] leading-none text-ink3 transition hover:bg-line2 hover:text-ink"
+                className="flex items-center rounded-[5px] px-1 py-1 text-ink3 transition hover:bg-line2 hover:text-ink"
               >
-                {editing ? "✕" : "⋯"}
+                {editing ? <X className="h-4 w-4" strokeWidth={2} /> : <MoreHorizontal className="h-4 w-4" strokeWidth={2} />}
               </button>
             </div>
 
@@ -529,10 +529,10 @@ export function TaskBoard({
                     type="button"
                     onClick={() => deleteList(lane.id, lane.name)}
                     disabled={busy}
-                    className="ml-auto rounded-[6px] border border-line px-2 py-1 text-[12px] text-danger transition hover:border-danger"
+                    className="ml-auto inline-flex items-center gap-1 rounded-[6px] border border-line px-2 py-1 text-[12px] text-danger transition hover:border-danger"
                     title="Delete list"
                   >
-                    🗑 Delete
+                    <Trash2 className="h-3.5 w-3.5" strokeWidth={2} /> Delete
                   </button>
                 </div>
               </div>
@@ -599,8 +599,8 @@ export function TaskBoard({
                             </span>
                           )}
                           {c.checklist && c.checklist.total > 0 && (
-                            <span className="font-mono text-[10px] text-ink3">
-                              ☑ {c.checklist.done}/{c.checklist.total}
+                            <span className="inline-flex items-center gap-0.5 font-mono text-[10px] text-ink3">
+                              <ListChecks className="h-3 w-3" strokeWidth={2} /> {c.checklist.done}/{c.checklist.total}
                             </span>
                           )}
                           {!c.completed && c.dueIso && <TaskTimer dueIso={c.dueIso} />}
@@ -610,9 +610,9 @@ export function TaskBoard({
                               onClick={() => complete(c.id)}
                               disabled={busy}
                               title="Complete"
-                              className="ml-auto rounded-[6px] px-1.5 py-0.5 text-[12px] leading-none text-good transition hover:bg-line2"
+                              className="ml-auto flex items-center rounded-[6px] px-1 py-1 text-good transition hover:bg-line2"
                             >
-                              ✓
+                              <Check className="h-4 w-4" strokeWidth={2.5} />
                             </button>
                           )}
                         </div>
@@ -651,8 +651,8 @@ export function TaskBoard({
               >
                 Add list
               </button>
-              <button type="button" onClick={() => setAdding(false)} className="px-2 text-[12px] text-ink3">
-                ✕
+              <button type="button" onClick={() => setAdding(false)} className="flex items-center px-1.5 text-ink3" title="Cancel">
+                <X className="h-4 w-4" strokeWidth={2} />
               </button>
             </div>
           </div>
@@ -660,9 +660,9 @@ export function TaskBoard({
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="rounded-[14px] border border-dashed border-line py-3 text-[12.5px] font-semibold text-ink3 transition hover:border-accent hover:text-accent"
+            className="inline-flex items-center justify-center gap-1 rounded-[14px] border border-dashed border-line py-3 text-[12.5px] font-semibold text-ink3 transition hover:border-accent hover:text-accent"
           >
-            + Add list
+            <Plus className="h-4 w-4" strokeWidth={2} /> Add list
           </button>
         )}
       </div>
