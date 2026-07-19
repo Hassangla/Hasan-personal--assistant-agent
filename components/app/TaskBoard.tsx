@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { areaMeta } from "@/lib/areas";
 import { TaskTimer } from "@/components/app/TaskTimer";
+import { GripVertical, Search } from "lucide-react";
 import { LabelChips } from "@/components/app/LabelPicker";
 import { labelMeta } from "@/lib/labels";
 import { BoardAddCard } from "@/components/app/BoardAddCard";
@@ -375,7 +376,7 @@ export function TaskBoard({
       {/* in-board search */}
       <div className="px-0.5">
         <div className="relative max-w-[340px]">
-          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink3">⌕</span>
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-ink3" strokeWidth={2} />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -428,9 +429,9 @@ export function TaskBoard({
                 title="Drag to reorder list"
                 aria-label="Drag to reorder list"
                 style={{ touchAction: "none" }}
-                className="shrink-0 cursor-grab select-none text-[13px] leading-none text-ink3 hover:text-ink active:cursor-grabbing"
+                className="flex shrink-0 cursor-grab select-none items-center text-ink3 hover:text-ink active:cursor-grabbing"
               >
-                ⠿
+                <GripVertical className="h-[15px] w-[15px]" strokeWidth={2} />
               </button>
               <span style={{ background: lane.color }} className="h-2.5 w-2.5 shrink-0 rounded-full" />
               <button
@@ -569,9 +570,9 @@ export function TaskBoard({
                         title="Drag to move / reorder"
                         aria-label="Drag to move"
                         style={{ touchAction: "none" }}
-                        className="mt-0.5 shrink-0 cursor-grab select-none px-0.5 text-[15px] leading-none text-ink3 hover:text-ink active:cursor-grabbing"
+                        className="mt-0.5 flex shrink-0 cursor-grab select-none items-center text-ink3 hover:text-ink active:cursor-grabbing"
                       >
-                        ⠿
+                        <GripVertical className="h-4 w-4" strokeWidth={2} />
                       </button>
                       <div className="min-w-0 flex-1">
                         <button

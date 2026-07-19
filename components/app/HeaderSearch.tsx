@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { Search, User, Target, CheckSquare } from "lucide-react";
 
 // Global search in the header: type to search tasks, people, and goals across
 // the app; click a result to jump to it. Debounced; closes on outside click.
@@ -61,13 +62,13 @@ export function HeaderSearch() {
   return (
     <div ref={boxRef} className="relative">
       <div className="relative">
-        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-ink3">⌕</span>
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-ink3" strokeWidth={2} />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => setOpen(true)}
           placeholder="Search…"
-          className="w-[130px] rounded-[9px] border border-line bg-card py-1.5 pl-7 pr-2 text-[12.5px] text-ink outline-none transition focus:w-[200px] focus:border-[#3A3F47]"
+          className="w-[130px] rounded-[9px] border border-line bg-card py-1.5 pl-8 pr-2 text-[12.5px] text-ink outline-none transition focus:w-[200px] focus:border-[#3A3F47]"
         />
       </div>
 
@@ -84,7 +85,7 @@ export function HeaderSearch() {
                   <div className="px-3 pb-0.5 pt-1.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-inkfaint">Tasks</div>
                   {res.tasks.map((t) => (
                     <button key={t.id} onClick={() => go(`${pathname}?task=${t.id}`)} className={row}>
-                      <span className={t.done ? "text-good" : "text-inkfaint"}>{t.done ? "✓" : "○"}</span>
+                      <CheckSquare className={`h-4 w-4 shrink-0 ${t.done ? "text-good" : "text-inkfaint"}`} strokeWidth={2} />
                       <span className={`min-w-0 flex-1 truncate ${t.done ? "text-ink3 line-through" : "text-inkstrong"}`}>
                         {t.title}
                       </span>
@@ -97,7 +98,7 @@ export function HeaderSearch() {
                   <div className="px-3 pb-0.5 pt-2 font-mono text-[9.5px] uppercase tracking-[0.1em] text-inkfaint">People</div>
                   {res.people.map((p) => (
                     <button key={p.id} onClick={() => go(`/people`)} className={row}>
-                      <span className="text-ink3">👤</span>
+                      <User className="h-4 w-4 shrink-0 text-ink3" strokeWidth={2} />
                       <span className="min-w-0 flex-1 truncate text-inkstrong">{p.name}</span>
                     </button>
                   ))}
@@ -108,7 +109,7 @@ export function HeaderSearch() {
                   <div className="px-3 pb-0.5 pt-2 font-mono text-[9.5px] uppercase tracking-[0.1em] text-inkfaint">Goals</div>
                   {res.goals.map((g) => (
                     <button key={g.id} onClick={() => go(`/goals`)} className={row}>
-                      <span className="text-ink3">🎯</span>
+                      <Target className="h-4 w-4 shrink-0 text-ink3" strokeWidth={2} />
                       <span className="min-w-0 flex-1 truncate text-inkstrong">{g.title}</span>
                     </button>
                   ))}
